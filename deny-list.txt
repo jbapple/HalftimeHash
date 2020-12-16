@@ -1,0 +1,10 @@
+#src:/usr/include/c\+\+/10/bits/stl_vector.h
+src:/usr/bin/../lib/gcc/x86_64-linux-gnu/10/../../../../include/c\+\+/10/bits/stl_vector.h
+#fun:*memcmp*
+#fun:memcmp
+#fun:*memcmp
+#fun:memcmp*
+#fun:_start
+#fun:*me*
+fun:_Z2ToIdET_PKc
+fun:_Z2ToImET_PKc

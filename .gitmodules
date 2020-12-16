@@ -1,0 +1,6 @@
+[submodule "StronglyUniversalStringHashing"]
+	path = StronglyUniversalStringHashing
+	url = https://github.com/lemire/StronglyUniversalStringHashing
+[submodule "umash"]
+	path = umash
+	url = https://github.com/backtrace-labs/umash
