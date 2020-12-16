@@ -1,0 +1,3 @@
+[submodule "pvldbstyle"]
+	path = pvldbstyle
+	url = https://github.com/cwida/pvldbstyle
