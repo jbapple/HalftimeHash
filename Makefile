@@ -1,10 +1,10 @@
 .PHONY: all clean
 
-all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps
+all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe
 
 RELEASE_FLAGS = -ggdb3 -O3 -march=native -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -DNDEBUG \
-	-Wno-comment -Wno-ignored-attributes
+	-Wno-comment -Wno-ignored-attributes -std=gnu++17
 #DEBUGFLAGS = $(FLAGS) -ggdb3 -O0 -fno-unroll-loops -UNDEBUG
 #CFLAGS = $(FLAGS) -std=gnu11
 #CDEBUGFLAGS = $(DEBUGFLAGS) -std=gnu11
@@ -16,6 +16,9 @@ export
 	dia -e $@ $<
 
 %.exe: %.cc $(shell find -name '*.hpp' ) Makefile
+	$(CXX) $(RELEASE_FLAGS) -o $@ $<
+
+%.exe: %.cpp $(shell find -name '*.hpp' ) Makefile
 	$(CXX) $(RELEASE_FLAGS) -o $@ $<
 
 speed-v-epsilon.eps: points-example.txt plot.gnu Makefile
