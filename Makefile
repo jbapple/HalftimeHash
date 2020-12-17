@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe
+all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe line-cl-hh24.eps
 
 RELEASE_FLAGS = -ggdb3 -O3 -march=native -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -DNDEBUG \
@@ -21,7 +21,7 @@ export
 %.exe: %.cpp $(shell find -name '*.hpp' ) Makefile
 	$(CXX) $(RELEASE_FLAGS) -o $@ $<
 
-speed-v-epsilon.eps: points-example.txt plot.gnu Makefile
+line-cl-hh24.eps speed-v-epsilon.eps: plateau-008.txt points-example.txt plot.gnu Makefile
 	gnuplot plot.gnu
 
 clean: Makefile

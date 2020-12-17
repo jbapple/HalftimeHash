@@ -1,12 +1,13 @@
-%\documentclass[sigconf, nonacm]{acmart}
-\documentclass[acmsmall, nonacm]{acmart}
+\documentclass[sigconf, nonacm]{acmart}
 
-\geometry{twoside=false,
-  includeheadfoot, head=13pt, foot=2pc,
-  paperwidth=6in, paperheight=8in,
-  top=58pt, bottom=44pt, inner=46pt, outer=46pt,
-  marginparwidth=2pc,heightrounded
-}%
+%% \documentclass[acmsmall, nonacm]{acmart}
+
+%% \geometry{twoside=false,
+%%   includeheadfoot, head=13pt, foot=2pc,
+%%   paperwidth=6in, paperheight=8in,
+%%   top=58pt, bottom=44pt, inner=46pt, outer=46pt,
+%%   marginparwidth=2pc,heightrounded
+%% }%
 
 
 %\usepackage[margin=1in]{geometry}
@@ -202,6 +203,7 @@ This turns, for instance, a hash family that produces 24 bytes of output from a 
 
 The main portion of the text describes a particular instantiation of HalftimeHash that produces 24 bytes of output.
 This will be generalized in the analysis section.
+Variants will be specified by their number of output bits: HalftimeHash16, HalftimeHash24, HalftimeHash32, or HalftimeHash40.
 
 \section{Algorithm}
 \label{algo}
@@ -524,6 +526,8 @@ Post-cleanup tabulation hashing is available as an option in HalftimeHash's code
 \section{Analysis}
 \label{analysis}
 
+TODO: 40-byte output version
+
 This section presents metrics of an abstract invocation of HalftimeHash, including the collision probability, number of multiplications performed, and the number of entropy words used.
 This section will treat HalftimeHash as abstract, rather than focusing on a single version with distance 3 in the erasure code.
 For this we will use the following variables:
@@ -615,8 +619,6 @@ Now (\ref{ehc-delta}) reduces to
 \end{array}
 \]
 \end{proof}
-
-% TODO: we also need some additional notion of independence for the $k$ tree hashes?
 
 \subsection{Tree hash}
 
@@ -764,7 +766,6 @@ Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in th
 %%     \hline &Treehash  & $32k - k\lg\lfloor \log_f(kn / di_w) \rfloor$ & $8fk\lfloor\log_f(kn / di_w)\rfloor$ \\
 %%     \hline \multirow{2}{*}{Cleanup} & stack & \multirow{2}{*}{$32k$ (each and total)} & $bfk\lfloor \log_f(kn / di_w) \rfloor$ \\
 %%     & remainder &  & $bdi_wk$ \\
-%%     % TODO: put these show-your-work in an appendix
 %%     \hline
 %%   \end{tabular}
 %%   \caption{Notation: $d$ is the {\em dimension} of the erasure code and $e$ is the {\em block size}. For the main example in this paper, $(d, e) = (7, 9)$. $k$ is output width. For the codes in this paper, $k = e - d + 1$, which makes them {\em MDS codes}. The input width is $i_w$; this represents one measure (the other is $b$) of the size of the blocks of data fed into the encode and then hash steps of EHC. It is a user-tunable integer parameter of at least 1 that can increase performance by increased ILP. For codes like the $(7, 9)$ code that treat their input like 3-tuples, $i_w$ must be divisible by 3. $b$ is \texttt{sizeof(Block)}. $n$ is the string length in bytes. $f$ is fanout, a user-adjustable integer parameter of at least 2 that can increase the entropy provided at the cost of increasing the entropy required. }
@@ -797,7 +798,6 @@ Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in th
 %%     s\\
 %%   d}
 %% \end{table*}
-% TODO: matrix determinant requirements
 
 %% Figure \ref{entropy-table} generalizes the entropy requirements and guarantees of HalftimeHash.
 %% For the $(7,9)$ code discussed above, the experiments below have been configured to use $f = 8$, $n \leq 10^6$, and $B = 64$.
@@ -823,6 +823,10 @@ Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in th
 
 \section{Tests}
 
+All tests are run on an i7-7800x, running Ubuntu 18.04, with g++ 10.1.0-2ubuntu1~18.04.
+
+
+
 \includegraphics[width=8cm]{speed-v-epsilon.eps}
 \captionof{figure}{
   Trade-offs for almost-universal string hashing functions on strings of size 250KB.
@@ -831,13 +835,13 @@ Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in th
   This contrasts with the case of short strings, where clhash and UMASH have better performance.
 }
 
+\includegraphics[width=8cm]{line-cl-hh24.eps}
+
 % gnuplot> set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"; set output 'speed-v-epsilon.eps'; set xlabel 'nanoseconds per byte'; set ylabel 'collision probability'; set title "Speed vs. collision (lower left is better)"; unset key; set logscale y 2; unset logscale x; set grid; set yrange[1e-50:1e-10]; set xrange[0.0:0.08]; unset offsets; set xrange[0.0:0.08]; set format y '2^{%L}'; plot 'points-example.txt' using 1:2:3 with labels point pt 7 offset char 0,1
 
 TODO: compare to VHASH
 
 TODO: Notes on SMHasher and relatives
-
-
 
 %% \includegraphics[width=8cm]{benchmark-output/m5zn-medium.eps}
 %% \captionof{figure}{HalftimeHash's performance on m5zn EC2 nodes compared to other AU families. Performance cliffs correspond to L1 and L2 cache sizes.}
@@ -861,8 +865,8 @@ TODO: Notes on SMHasher and relatives
 
 
 In addition to the version of HalftimeHash that produces 192-bits of output, we have also implemented ones that produce 128 and 256 bits of output.
-For the fastest implementation, the 128-bit version uses $f = 8$ and $i_w = 2$.
-TODO: explain input width better
+
+TODO: explain block size differences better
 
 % TODO: do this on EC2 and in separate runs for each family
 %TODO: do a ratio test and do it over the whole range
