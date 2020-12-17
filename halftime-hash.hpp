@@ -1050,8 +1050,6 @@ inline void V1Scalar(const uint64_t* entropy, const char* char_input, size_t len
       entropy, char_input, length, output);
 }
 
-// TODO: make this more ergonomic: only one template parameter, a "max bytesneeded"
-// functio, etc.
 template <unsigned out_width>
 inline constexpr size_t GetEntropyBytesNeeded(size_t n) {
   return (3 == out_width) ? EhcBadger<BlockWrapperScalar, 7, 3, 9,
@@ -1089,6 +1087,12 @@ inline void V4<2>(const uint64_t* entropy, const char* char_input, size_t length
 #elif __AVX2__
 
 template <>
+inline void V4<5>(const uint64_t* entropy, const char* char_input, size_t length,
+                  uint64_t output[5]) {
+  return V4Avx2<5, 3, 9, 5>(entropy, char_input, length, output);
+}
+
+template <>
 inline void V4<4>(const uint64_t* entropy, const char* char_input, size_t length,
                   uint64_t output[4]) {
   return V4Avx2<7, 3, 10, 4>(entropy, char_input, length, output);
@@ -1109,6 +1113,12 @@ inline void V4<2>(const uint64_t* entropy, const char* char_input, size_t length
 #elif __SSE2__
 
 template <>
+inline void V4<5>(const uint64_t* entropy, const char* char_input, size_t length,
+                  uint64_t output[5]) {
+  return V4Sse2<5, 3, 9, 5>(entropy, char_input, length, output);
+}
+
+template <>
 inline void V4<4>(const uint64_t* entropy, const char* char_input, size_t length,
                   uint64_t output[4]) {
   return V4Sse2<7, 3, 10, 4>(entropy, char_input, length, output);
@@ -1127,6 +1137,12 @@ inline void V4<2>(const uint64_t* entropy, const char* char_input, size_t length
 }
 
 #else
+
+template <>
+inline void V4<5>(const uint64_t* entropy, const char* char_input, size_t length,
+                  uint64_t output[5]) {
+  return V4Scalar<5, 3, 9, 5>(entropy, char_input, length, output);
+}
 
 template <>
 inline void V4<4>(const uint64_t* entropy, const char* char_input, size_t length,
@@ -1151,6 +1167,12 @@ inline void V4<2>(const uint64_t* entropy, const char* char_input, size_t length
 #if __AVX2__
 
 template <>
+inline void V3<5>(const uint64_t* entropy, const char* char_input, size_t length,
+                  uint64_t output[5]) {
+  return V3Avx2<5, 3, 9, 5>(entropy, char_input, length, output);
+}
+
+template <>
 inline void V3<4>(const uint64_t* entropy, const char* char_input, size_t length,
                   uint64_t output[4]) {
   return V3Avx2<7, 3, 10, 4>(entropy, char_input, length, output);
@@ -1171,6 +1193,12 @@ inline void V3<2>(const uint64_t* entropy, const char* char_input, size_t length
 #elif __SSE2__
 
 template <>
+inline void V3<5>(const uint64_t* entropy, const char* char_input, size_t length,
+                  uint64_t output[5]) {
+  return V3Sse2<5, 3, 9, 5>(entropy, char_input, length, output);
+}
+
+template <>
 inline void V3<4>(const uint64_t* entropy, const char* char_input, size_t length,
                   uint64_t output[4]) {
   return V3Sse2<7, 3, 10, 4>(entropy, char_input, length, output);
@@ -1189,6 +1217,12 @@ inline void V3<2>(const uint64_t* entropy, const char* char_input, size_t length
 }
 
 #else
+
+template <>
+inline void V3<5>(const uint64_t* entropy, const char* char_input, size_t length,
+                  uint64_t output[5]) {
+  return V3Scalar<5, 3, 9, 5>(entropy, char_input, length, output);
+}
 
 template <>
 inline void V3<4>(const uint64_t* entropy, const char* char_input, size_t length,
@@ -1213,6 +1247,12 @@ inline void V3<2>(const uint64_t* entropy, const char* char_input, size_t length
 #if __SSE2__
 
 template <>
+inline void V2<5>(const uint64_t* entropy, const char* char_input, size_t length,
+                  uint64_t output[5]) {
+  return V2Sse2<5, 3, 9, 5>(entropy, char_input, length, output);
+}
+
+template <>
 inline void V2<4>(const uint64_t* entropy, const char* char_input, size_t length,
                   uint64_t output[4]) {
   return V2Sse2<7, 3, 10, 4>(entropy, char_input, length, output);
@@ -1233,6 +1273,12 @@ inline void V2<2>(const uint64_t* entropy, const char* char_input, size_t length
 #else
 
 template <>
+inline void V2<5>(const uint64_t* entropy, const char* char_input, size_t length,
+                  uint64_t output[5]) {
+  return V2Scalar<5, 3, 9, 5>(entropy, char_input, length, output);
+}
+
+template <>
 inline void V2<4>(const uint64_t* entropy, const char* char_input, size_t length,
                   uint64_t output[4]) {
   return V2Scalar<7, 3, 10, 4>(entropy, char_input, length, output);
@@ -1251,6 +1297,12 @@ inline void V2<2>(const uint64_t* entropy, const char* char_input, size_t length
 }
 
 #endif
+
+template <>
+inline void V1<5>(const uint64_t* entropy, const char* char_input, size_t length,
+                  uint64_t output[5]) {
+  return V1Scalar<5, 3, 9, 5>(entropy, char_input, length, output);
+}
 
 template <>
 inline void V1<4>(const uint64_t* entropy, const char* char_input, size_t length,

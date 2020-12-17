@@ -809,10 +809,6 @@ Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in th
 
 %   \includegraphics[width=8cm]{benchmark-output/{c5a.l-medium}.eps}
 
-\subsection{HalftimeHash, in total}
-
-
-
 %gnuplot> set xlabel 'input length in bytes'; set ylabel 'output bits of entropy'; set title 'HalftimeHash192 entropy'; unset key; set grid; set logscale x; unset logscale y; set yrange [85:91]; set xrange[1.0:1000000000000.0]; plot -log(2**-96 + 2**-90 + (2**-96)*( floor(log((x < 192 ? 192 : x)/192)/log(8))**3))/log(2)
 
 % gnuplot> set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; set title 'c5a.l'; set key top right; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[0:50]; set xrange[1000:*]; plot 'c5a.large-clang-11-f4ab1fb-13107.txt' using 1:(1.0/ column(2)) lw 0.5,  for [i=3:3] 'c5a.large-clang-11-f4ab1fb-13107.txt' using 1:(1.0/ column(i)) lw 0.5, for [i=4:4] 'c5a.large-clang-11-f4ab1fb-13107.txt' using 1:(1.0/ column(i)) lw 0.5, for [i=5:5] 'c5a.large-clang-11-f4ab1fb-13107.txt' using 1:(1.0/ column(i)) lw 0.5, for [i=6:6] 'c5a.large-gcc-10-f4ab1fb-13107.txt' using 1:(1.0/ column(i)) lw 0.5, for [i=7:7] 'c5a.large-gcc-10-f4ab1fb-13107.txt' using 1:(1.0/ column(i)) lw 0.5, for [i=8:8] 'c5a.large-clang-11-f4ab1fb-13107.txt' using 1:(1.0/ column(i)) lw 0.5, for [i=9:9] 'c5a.large-clang-11-f4ab1fb-13107.txt' using 1:(1.0/ column(i)) lw 0.5
