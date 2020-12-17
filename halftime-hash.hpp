@@ -39,7 +39,8 @@ inline u512 RightShift(u512 a, int) { return _mm512_srli_epi64(a, 32); }
 //  inline u512 RightShift(u512 a, int i) { return _mm512_shuffle_epi32(a,
 //  _MM_PERM_ACAC); }
 inline u512 LeftShift(u512 a, int i) { return _mm512_slli_epi64(a, i); }
-inline u512 Negate(u512 a) { return _mm512_sub_epi64(_mm512_set1_epi64(0), a); }
+inline u512 Minus(u512 a, u512 b) { return _mm512_sub_epi64(a, b); }
+inline u512 Negate(u512 a) { return Minus(_mm512_set1_epi64(0), a); }
 
 struct BlockWrapper512 {
   using Block = u512;
@@ -59,10 +60,11 @@ inline u256 Times(u256 a, u256 b) { return _mm256_mul_epu32(a, b); }
 inline u256 Xor(u256 a, u256 b) { return _mm256_xor_si256(a, b); }
 inline u256 LeftShift(u256 a, int i) { return _mm256_slli_epi64(a, i); }
 inline u256 RightShift(u256 a, int i) { return _mm256_srli_epi64(a, i); }
+inline u256 Minus(u256 a, u256 b) { return _mm256_sub_epi64(a, b); }
 
 static inline u256 Negate(u256 a) {
   const auto zero = _mm256_set1_epi64x(0);
-  return _mm256_sub_epi64(zero, a);
+  return Minus(zero, a);
 }
 
 inline uint64_t Sum(u256 a) {
@@ -91,6 +93,7 @@ using u128 = __m128i;
 
 inline u128 LeftShift(u128 a, int i) { return _mm_slli_epi64(a, i); }
 inline u128 Plus(u128 a, u128 b) { return _mm_add_epi64(a, b); }
+inline u128 Minus(u128 a, u128 b) { return _mm_sub_epi64(a, b); }
 inline u128 Plus32(u128 a, u128 b) { return _mm_add_epi32(a, b); }
 inline u128 RightShift(u128 a, int i) { return _mm_srli_epi64(a, i); }
 inline u128 Times(u128 a, u128 b) { return _mm_mul_epu32(a, b); }
@@ -98,7 +101,7 @@ inline u128 Xor(u128 a, u128 b) { return _mm_xor_si128(a, b); }
 
 static inline u128 Negate(u128 a) {
   const auto zero = _mm_set1_epi64x(0);
-  return _mm_sub_epi64(zero, a);
+  return Minus(zero, a);
 }
 
 inline uint64_t Sum(u128 a) {
@@ -120,6 +123,7 @@ struct BlockWrapper128 {
 
 inline uint64_t Xor(uint64_t a, uint64_t b) { return a ^ b; }
 inline uint64_t Plus(uint64_t a, uint64_t b) { return a + b; }
+inline uint64_t Minus(uint64_t a, uint64_t b) { return a - b; }
 inline uint64_t LeftShift(uint64_t a, int s) { return a << s; }
 inline uint64_t RightShift(uint64_t a, int s) { return a >> s; }
 inline uint64_t Sum(uint64_t a) { return a; }
@@ -250,6 +254,60 @@ inline void Encode4(Block io[10 * 3]) {
   Distribute3(9, {y}, {y, z}, {x, z});        // 167
 }
 
+// https://docs.switzernet.com/people/emin-gabrielyan/051103-erasure-9-5-resilient/
+template <typename Block>
+inline void Encode5(Block io[9 * 3]) {
+  constexpr unsigned x = 0, y = 1, z = 2;
+
+  const Block* iter = &io[0];
+  io[5 * 3 + x] = io[6 * 3 + x] = iter[x];
+  io[5 * 3 + y] = io[6 * 3 + y] = iter[y];
+  io[5 * 3 + z] = io[6 * 3 + z] = iter[z];
+
+  io[7 * 3 + x] = io[8 * 3 + x] = iter[y];
+  io[7 * 3 + y] = io[8 * 3 + y] = iter[z];
+  io[7 * 3 + z] = io[8 * 3 + z] = Xor(iter[x], iter[y]);
+  iter += 3;
+
+  auto DistributeRaw = [io, iter](unsigned slot, unsigned label,
+                                  std::initializer_list<unsigned> rest) {
+    for (unsigned i : rest) {
+      io[slot * 3 + i] = Xor(io[slot * 3 + i], iter[label]);
+    }
+  };
+
+  auto Distribute3 = [&iter, DistributeRaw](unsigned idx,
+                                            std::initializer_list<unsigned> a,
+                                            std::initializer_list<unsigned> b,
+                                            std::initializer_list<unsigned> c) {
+    DistributeRaw(idx, x, a);
+    DistributeRaw(idx, y, b);
+    DistributeRaw(idx, z, c);
+    iter += 3;
+  };
+
+  while (iter != io + 9 * 3) {
+    Distribute3(5, {x}, {y}, {z});
+  }
+
+  iter = &io[3];
+  Distribute3(6, {z}, {x, z}, {y});           // 73
+  Distribute3(6, {x, z}, {x, y, z}, {y, z});  // 140
+  Distribute3(6, {y}, {y, z}, {x, z});        // 167
+  Distribute3(6, {x, y}, {z}, {x});           // 198
+
+  iter = &io[3];
+  Distribute3(7, {x, y, z}, {x}, {x, y});     // 323
+  Distribute3(7, {x, z}, {x, y, z}, {y, z});  // 140
+  Distribute3(7, {x}, {y}, {z});              // 11
+  Distribute3(7, {y}, {y, z}, {x, z});        // 167
+
+  iter = &io[3];
+  Distribute3(8, {x}, {y}, {z});              // 11
+  Distribute3(8, {x, y}, {z}, {x});           // 198
+  Distribute3(8, {y, z}, {x, y}, {x, y, z});  // 292
+  Distribute3(8, {x, z}, {x, y, z}, {y, z});  // 140
+}
 
 template <typename Badger, typename Block>
 inline void Combine2(const Block input[12], Block output[2]);
@@ -259,6 +317,9 @@ inline void Combine3(const Block input[9], Block output[3]);
 
 template <typename Badger, typename Block>
 inline void Combine4(const Block input[10], Block output[3]);
+
+template <typename Badger, typename Block>
+inline void Combine5(const Block input[9], Block output[3]);
 
 constexpr inline int CeilingLog2(size_t n) {
   return (n <= 1) ? 0 : 1 + CeilingLog2(n / 2 + n % 2);
@@ -294,9 +355,11 @@ struct EhcBadger {
   }
 
   static inline void Encode(Block io[encoded_dimension * in_width]) {
+    static_assert(2 <= out_width && out_width <= 5, "uhoh");
     if (out_width == 3) return Encode3<Block>(io);
     if (out_width == 2) return Encode2<Block>(io);
     if (out_width == 4) return Encode4<Block>(io);
+    if (out_width == 5) return Encode5<Block>(io);
   }
 
   static Block SimpleTimes(std::integral_constant<int, -17>, Block x) {
@@ -326,6 +389,9 @@ struct EhcBadger {
   }
   static Block SimpleTimes(std::integral_constant<int, 5>, Block x) {
     return Plus(x, LeftShift(x, 2));
+  }
+  static Block SimpleTimes(std::integral_constant<int, 7>, Block x) {
+    return Minus(LeftShift(x, 3), x);
   }
   static Block SimpleTimes(std::integral_constant<int, 8>, Block x) {
     return LeftShift(x, 3);
@@ -372,18 +438,28 @@ struct EhcBadger {
     sinks[3] = Plus(sinks[3], SimplerTimes<d>(x));
   }
 
+  template <int a, int b, int c, int d, int e>
+  static void Dot5(Block sinks[5], Block x) {
+    sinks[0] = Plus(sinks[0], SimplerTimes<a>(x));
+    sinks[1] = Plus(sinks[1], SimplerTimes<b>(x));
+    sinks[2] = Plus(sinks[2], SimplerTimes<c>(x));
+    sinks[3] = Plus(sinks[3], SimplerTimes<d>(x));
+    sinks[4] = Plus(sinks[4], SimplerTimes<e>(x));
+  }
+
   static void Combine(const Block input[encoded_dimension],
                       Block (&output)[out_width]) {
     if (out_width == 3) return Combine3<EhcBadger>(input, output);
     if (out_width == 2) return Combine2<EhcBadger>(input, output);
     if (out_width == 4) return Combine4<EhcBadger>(input, output);
+    if (out_width == 5) return Combine5<EhcBadger>(input, output);
   }
 
   static void Load(const char input[dimension * in_width * sizeof(Block)],
                    Block output[dimension * in_width]) {
     static_assert(dimension * in_width <= 25, "");
 #ifndef __clang__
-#pragma GCC unroll 25
+#pragma GCC unroll 28
 #endif
     for (unsigned i = 0; i < dimension * in_width; ++i) {
       output[i] = BlockWrapper::LoadBlock(&input[i * sizeof(Block)]);
@@ -545,8 +621,6 @@ struct EhcBadger {
 //  1   1   0   0   1   4   1   2   2
 //  1   4   1   1   0   0   2   1   2
 
-
-  
 template <typename Badger, typename Block>
 inline void Combine3(const Block input[9], Block output[3]) {
   output[1] = input[0];
@@ -662,6 +736,32 @@ inline void Combine4(const Block input[10], Block output[4]) {
   Badger::template Dot4<2, 1, 8, 4>(output, input[7]);
   Badger::template Dot4<4, 3, 1, 10>(output, input[8]);
   Badger::template Dot4<-17, 4, 8, 3>(output, input[9]);
+}
+
+// evenness: 3 weight: 15
+// 1   0   0   0   0   1   1   2   4
+// 0   1   0   0   0   1   2   1   7
+// 0   0   1   0   0   1   3   8   5
+// 0   0   0   1   0   1   4   9   8
+// 0   0   0   0   1   1   5   3   9
+
+template <typename Badger, typename Block>
+inline void Combine5(const Block input[10], Block output[4]) {
+  output[0] = input[0];
+  output[1] = input[1];
+  output[2] = input[2];
+  output[3] = input[3];
+  output[4] = input[4];
+
+  output[0] = Plus(output[0], input[5]);
+  output[1] = Plus(output[1], input[5]);
+  output[2] = Plus(output[2], input[5]);
+  output[3] = Plus(output[3], input[5]);
+  output[4] = Plus(output[4], input[5]);
+
+  Badger::template Dot5<1, 2, 3, 4, 5>(output, input[6]);
+  Badger::template Dot5<2, 1, 8, 9, 3>(output, input[7]);
+  Badger::template Dot5<4, 7, 5, 8, 9>(output, input[8]);
 }
 
 template <int width>
@@ -781,6 +881,15 @@ inline Repeat<Block, count> Plus(Repeat<Block, count> a, Repeat<Block, count> b)
   Repeat<Block, count> result;
   for (unsigned i = 0; i < count; ++i) {
     result.it[i] = Plus(a.it[i], b.it[i]);
+  }
+  return result;
+}
+
+template <typename Block, unsigned count>
+inline Repeat<Block, count> Minus(Repeat<Block, count> a, Repeat<Block, count> b) {
+  Repeat<Block, count> result;
+  for (unsigned i = 0; i < count; ++i) {
+    result.it[i] = Minus(a.it[i], b.it[i]);
   }
   return result;
 }
@@ -952,6 +1061,12 @@ inline constexpr size_t GetEntropyBytesNeeded(size_t n) {
 }
 
 #if __AVX512F__
+
+template <>
+inline void V4<5>(const uint64_t* entropy, const char* char_input, size_t length,
+                  uint64_t output[5]) {
+  return V4Avx512<5, 3, 9, 5>(entropy, char_input, length, output);
+}
 
 template <>
 inline void V4<4>(const uint64_t* entropy, const char* char_input, size_t length,

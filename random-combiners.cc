@@ -277,6 +277,25 @@ uint64_t Determinant4(const uint64_t* input[4]) {
   return result;
 }
 
+uint64_t Determinant5(const uint64_t* input[4]) {
+  const uint64_t* inner[4];
+  uint64_t result = 0;
+  inner[0] = &input[1][1];
+  inner[1] = &input[2][1];
+  inner[2] = &input[3][1];
+  inner[3] = &input[4][1];
+  result = result + input[0][0] * Determinant4(inner);
+  inner[0] = &input[0][1];
+  result = result - input[1][0] * Determinant4(inner);
+  inner[1] = &input[1][1];
+  result = result + input[2][0] * Determinant4(inner);
+  inner[2] = &input[2][1];
+  result = result - input[3][0] * Determinant4(inner);
+  inner[3] = &input[3][1];
+  result = result + input[4][0] * Determinant4(inner);
+  return result;
+}
+
 int MostEvenDeterminant3(int length, const uint64_t input[][3]) {
   const uint64_t * columns[3];
   int result = 0;
@@ -313,6 +332,31 @@ int MostEvenDeterminant4(int length, const uint64_t input[][4]) {
           auto evenness = det ? __builtin_ctzll(det) : 64;
           result = max(result, evenness);
           if (64 == result) return 64;
+        }
+      }
+    }
+  }
+  return result;
+}
+
+int MostEvenDeterminant5(int length, const uint64_t input[][5]) {
+  const uint64_t* columns[5];
+  int result = 0;
+  for (int i = 0; i < length; ++i) {
+    columns[0] = input[i];
+    for (int j = i + 1; j < length; ++j) {
+      columns[1] = input[j];
+      for (int k = j + 1; k < length; ++k) {
+        columns[2] = input[k];
+        for (int m = k + 1; m < length; ++m) {
+          columns[3] = input[m];
+          for (int n = m + 1; n < length; ++n) {
+            columns[4] = input[n];
+            auto det = Determinant5(columns);
+            auto evenness = det ? __builtin_ctzll(det) : 64;
+            result = max(result, evenness);
+            if (64 == result) return 64;
+          }
         }
       }
     }
@@ -377,21 +421,21 @@ void main_loop(){
   // 3 -> 12
   // 4, 119 -> 15
   //
-  static constexpr int kColumns = 10;
+  static constexpr int kColumns = 9;
   int target = 0;
   int weightTarget = 0;
-  uint64_t m[kColumns][4];
+  uint64_t m[kColumns][5];
   // GenMatrix(kColumns, m);
   // PrintMatrix(kColumns, m);
   // cout << WeighScalar(33) << endl << WeighScalar(-33) << endl;
   // cout << "MED: " << MostEvenDeterminant(kColumns, m) << endl;
-  using Foo = HeightBased<4>;
+  using Foo = HeightBased<5>;
   int best = 64 + 1;
   int bestWeight = kColumns * 4 * 77;
   vector<int> topWeights(best, bestWeight);
   while (best > target || bestWeight > weightTarget) {
     Foo::GenMatrix(kColumns, m);
-    auto here = MostEvenDeterminant4(kColumns, m);
+    auto here = MostEvenDeterminant5(kColumns, m);
     if (here == 64) continue;
     auto weight = Foo::WeighMatrix(kColumns, m);
     if (topWeights[here] <= weight) continue;
