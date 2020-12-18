@@ -205,6 +205,8 @@ The main portion of the text describes a particular instantiation of HalftimeHas
 This will be generalized in the analysis section.
 Variants will be specified by their number of output bits: HalftimeHash16, HalftimeHash24, HalftimeHash32, or HalftimeHash40.
 
+Except where otherwise mentioned, all benchmarks were run on an Intel i7-7800x, running Ubuntu 18.04, with g++ 10.1.0-2ubuntu1~18.04.
+
 \section{Algorithm}
 \label{algo}
 
@@ -823,7 +825,6 @@ Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in th
 
 \section{Tests}
 
-All tests are run on an i7-7800x, running Ubuntu 18.04, with g++ 10.1.0-2ubuntu1~18.04.
 
 
 
@@ -840,6 +841,9 @@ All tests are run on an i7-7800x, running Ubuntu 18.04, with g++ 10.1.0-2ubuntu1
 % gnuplot> set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"; set output 'speed-v-epsilon.eps'; set xlabel 'nanoseconds per byte'; set ylabel 'collision probability'; set title "Speed vs. collision (lower left is better)"; unset key; set logscale y 2; unset logscale x; set grid; set yrange[1e-50:1e-10]; set xrange[0.0:0.08]; unset offsets; set xrange[0.0:0.08]; set format y '2^{%L}'; plot 'points-example.txt' using 1:2:3 with labels point pt 7 offset char 0,1
 
 TODO: compare to VHASH
+
+HalftimeHash24, when composed with SipHahs or tabulation hashing as a final step, passes all SMHasher tests.
+This is faster in SMhasher's bulk speed tests than all other previously tested hash function, excluding \texttt{crc32\_pclmul\_le\_16}, a deterministic 32-bit hash function implemented in assembly in the Linux kernel.
 
 TODO: Notes on SMHasher and relatives
 
@@ -977,7 +981,7 @@ For each machine configuration, we show the graph of the best performing compile
 
 TODO: CAVP @ NIST
 
-TODO: crypto community tests
+TODO: crypto community tests, eBASH
 
 \section{Future work}
 
@@ -992,6 +996,8 @@ Notable exceptions include some embedded platforms and native JavaScript, which 
 TODO: longer outputs to match clhash or poly1305
 
 TODO: compare against optimized poly1305 from kernel
+
+TODO: test crc crc32\_pclmul\_le\_16 and see if that can go more than twice as fast as HalftimeHash, including making it work on unaligned data
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{library}
