@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe line-cl-hh24.eps
+all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe line-cl-hh24.eps amd-16.eps gcc-local-hh4.eps
 
 RELEASE_FLAGS = -ggdb3 -O3 -march=native -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -DNDEBUG \
@@ -26,13 +26,17 @@ umash/umash.o: umash/umash.c Makefile
 %.exe: %.cpp $(shell find -name '*.hpp' ) umash/umash.o Makefile
 	$(CXX) $(RELEASE_FLAGS) -o $@ $< umash/umash.o
 
-line-cl-hh24.eps speed-v-epsilon.eps: plateau-008.txt points-example.txt plot.gnu Makefile
+amd-16.eps line-cl-hh24.eps speed-v-epsilon.eps amd-cl-hh24.eps gcc-local-hh4.eps&: plateau-008.txt points-example.txt plot.gnu Makefile
 	gnuplot plot.gnu
 
 clean: Makefile
 	rm -f Diagram2.eps
 	rm -f random-combiners.exe
 	rm -f speed-v-epsilon.eps
+	rm -f gcc-local-hh4.eps
+	rm -f amd-16.eps
+	rm -f amd-24.eps
+	rm -f amd-cl-hh24.eps
 	rm -f benchmark.exe
 	rm -f line-cl-hh24.eps
 	rm -f umash/umash.o

@@ -375,7 +375,7 @@ There may be matrices of this size with fewer bits set in the entries -- it is e
 \right)
 \end{displaymath}
 
-For $k = 2, 4$, HalftimeHash uses
+For $k \in \{2, 4, 5\}$, HalftimeHash uses
 
 \[
 \left(
@@ -385,7 +385,7 @@ For $k = 2, 4$, HalftimeHash uses
 \end{array}
 \right)
 \]
-and
+
 \[
 \left(
 \begin{array}{rrrrrrrrrr}
@@ -393,6 +393,18 @@ and
   0  & 1&   0  & 0&   1  & 2&   4  & 1&   3  & 4\\
   0 &  0 &  1 &  0 &  1 &  3 &  9 &  8 &  1 &  8\\
   0&   0  & 0&   1  & 1&   4 &-10&   4  &10&   3
+\end{array}
+\right)
+\]
+
+\[
+\left(
+\begin{array}{rrrrrrrrr}
+ 1 & 0 & 0 & 0 & 0 & 1 & 1 & 2 & 4\\
+ 0 & 1 & 0 & 0 & 0 & 1 & 2 & 1 & 7\\
+ 0 & 0 & 1 & 0 & 0 & 1 & 3 & 8 & 5\\
+ 0 & 0 & 0 & 1 & 0 & 1 & 4 & 9 & 8\\
+ 0 & 0 & 0 & 0 & 1 & 1 & 5 & 3 & 9
 \end{array}
 \right)
 \]
@@ -528,31 +540,31 @@ Post-cleanup tabulation hashing is available as an option in HalftimeHash's code
 \section{Analysis}
 \label{analysis}
 
-TODO: 40-byte output version
-
-This section presents metrics of an abstract invocation of HalftimeHash, including the collision probability, number of multiplications performed, and the number of entropy words used.
+This section presents metrics of an execution of HalftimeHash, including the collision probability, number of multiplications performed, and the amount of input entropy used.
 This section will treat HalftimeHash as abstract, rather than focusing on a single version with distance 3 in the erasure code.
 For this we will use the following variables:
 
 \begin {description}
 \item[$w$] is the number of 64-bit words used in Encode step.
-  In the main variant discussed above, this is 3, as each input to EHC consists of three 64-bit words.
-\item[$d$] is the {\em dimension} of the erasure code - the number of elements before applying the encoding.
-  In the main variant discussed above, this is 7.
-  $de$ is thus the number of 64-bit words fed into each EHC execution.
+  In the main variant discussed above, this is three, as each of the seven inputs to EHC consists of three 64-bit words.
+\item[$d$] is the {\em dimension} of the erasure code - the number of elements before applying the encoding, and $d e$ is the total number of 64-bit words fed into each EHC execution.
+  In the main variant discussed above, $d$ is 7.
 \item[$e$] is the {\em encoded size} - the number of 64-bit words in EHC after applying the encoding.
+  In the main example above, this is nine.
 \item[$k$] is the number of 64-bit words produced by the Combine step of EHC.
   This is also the number of 64-bit words produced at the end of the Cleanup step of HalftimeHash.
   For the main example discussed above, k is 3.
 \item[$b$] the number of 64-bit words in a block.
   For AVX-512 variants of HalftimeHash, this is 8.
-\item[$n$] is the string length in 64-bit words, padded at the word level to make $n$ integral.
-\item[$f$] is fanout, a user-adjustable integer parameter of at least 2 that can decrease the collision probability at the cost of increasing the size of the seeds.
+\item[$n$] is the string length in 64-bit words, padded at the word level to make $n$ integral.\footnote{This is used for analysis only; in the code string length is tracked in characters, without any padding.}
+\item[$f$] is fanout, a user-adjustable integer parameter of at least 2 that can decrease the collision probability at the cost of increasing the amount of input entropy used.
   Fanout corresponds to the size of an instance fed to NH in the tree hash portion of HalftimeHash.
+  In the code, HalftimeHash uses $f = 8$.
 \item[$p$] is the max power of two that divides a determinant of any $k \times k$ matrix made from columns of the combining matrix $T$ in step three of EHC.
+  Larger $p$ implies larger collision probability; doubling $p$ increases $\varepsilon$ by a factor of $2^k$.
 \end{description}
 
-HalftimeHash has the following steps:
+HalftimeHash has the following steps that will be analyzed in order:
 
 \begin{enumerate}
 \item The parts of EHC:
@@ -566,20 +578,22 @@ HalftimeHash has the following steps:
 \item{} {\em [optional]} Finalize with tabulation hashing or SipHash
 \end{enumerate}
 
+A summary of the conclusions is in Table \ref{analysis-table}.
+
 \subsection{EHC}
 
 In each EHC execution, $dw$ words are read in.
 They are converted to $ew$ words deterministically, without using any input entropy.
-Those $ew$ words are then converted with NH (the AU version) to $e$ words.
+Those $ew$ words are then hashed with NH (the AU version) to $e$ words.
 This uses $e(w - 1)$ words of input entropy and performs $e(w - 1)$ multiplications.
 
-\begin{theorem}
+\begin{lemma}
   The EHC step of HalftimeHash is $2^{k(p-32)}$-AU.
-\end{theorem}
+\end{lemma}
 
 \begin{proof}
-As a reference and a warm-up, here is a way of viewing the proof from the original EHC paper:
-In an environment in which the EHC matrix product is over a finite field, EHC is $2^{-32k}$-AU.
+As a reference and a warm-up, here is a way of viewing the corresponding proof from the original EHC paper:
+in an environment in which the EHC matrix product is over a finite field, EHC is $2^{-32k}$-AU.
 Given that $x$ and $y$ differ, let $\bar{x}$ and $\bar{y}$ be their encodings and $F$ be $k$ locations where $\bar{x}_i \neq \bar{y}_i$.
 Let $W$ be the matrix formed by the columns of $T$ where the column index is in $F$.
 We want to bound
@@ -691,6 +705,31 @@ en(w-1)/dw + nk/dw + f k b \left\lfloor\log_f \lfloor n/dw\rfloor\right\rfloor +
 
 For a string of length 1MB, 84\% of the multiplications happen in the EHC step, and the number of multiplications is about one per ten bytes of input.
 Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in the EHC step.
+
+\begin{table*}
+\begin{tabular}{|l|c|c|c|c|c|c|c|}
+  \hline {\bf Step} & {\bf Mults (each)} & {\bf In Entropy (each)} & {\bf Out Entropy (each)} & {\bf Height} & {\bf Number} & {\bf Out words total}\\
+  \hline EHC & $e(w-1)$ & $e(w-1)$ & $(32-p)k$ & 1 & $\lfloor n/dw \rfloor$ & $k \lfloor n/dw \rfloor$ \\
+  \hline Tree Hash & $f-1$ & $f-1$ & $32k$ & $\left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ & $k \lfloor n / d w \rfloor$ / f & $f k \left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ \\
+  \hline Cleanup stack & $b f k \left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ & $b f k \left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ & $32k$ & 1 & 1 & $k$ \\
+  \hline Cleanup input & $b d k w$ &  $b d w + k - 1$ & $32k$ & 1 & 1 & $k$ \\
+  \hline (Opt.) Tabulation & 0 &  $2^{11}k$ & $61 - \lg k$ & 1 & 1 & 1 \\
+  \hline
+\end{tabular}
+\caption{\label{analysis-table}stats}
+\end{table*}
+
+
+%% \begin{tabular}{|l|c|c|c|c|c|c|}
+%%   \hline {\bf Step} & {\bf Multiplications} & {\bf In Entropy} & {\bf Out Entropy} & {\bf Out words}\\
+%%   \hline EHC & $e(w-1) \$ & $(32-p)k$ & 1 & $\lfloor n/dw \rfloor$ & $k \lfloor n/dw \rfloor$ \\
+%%   \hline Tree Hash & $f-1$ & $32k$ & $\left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ & $(f-1) k \lfloor n / d w \rfloor$ & $f k \left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ \\
+%%   \hline Cleanup stack & $b f k \left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ & $32k$ & 1 & 1 & $k$ \\
+%%   \hline Cleanup input & $n / b d w$ & $32k$ & 1 & 1 & $k$ \\
+%%   \hline
+%% \end{tabular}
+
+
 
 %% Finally, for the tabulation hashing of 32 bytes, \texttt{32 * 256 * 8 = 64KiB} of entropy is required.
 %% This is the majority of all of the entropy used by HalftimeHash.
@@ -830,19 +869,48 @@ Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in th
 
 \includegraphics[width=8cm]{speed-v-epsilon.eps}
 \captionof{figure}{
+  \label{frontier}
   Trade-offs for almost-universal string hashing functions on strings of size 250KB.
   The lower left corner is ideal: low execution time and low collision probability.
   Note that the clhash and UMASH executions are not along the efficient frontier / layer-of-maxima, in that one version of HalftimeHash is always faster and has lower collision probability.
   This contrasts with the case of short strings, where clhash and UMASH have better performance.
 }
 
-\includegraphics[width=8cm]{line-cl-hh24.eps}
+\includegraphics[width=8cm]{gcc-local-hh4.eps}
+\captionof{figure}{
+  Different output widths of HalftimeHash.
+  Note that even the longest of these is faster than clhash and UMASH; see Figure \ref{frontier}.
+}
+
+\begin{figure*}
+\begin{tabular}{cccc}
+\includegraphics[width=9cm]{line-cl-hh24.eps}
+&
+\includegraphics[width=9cm]{amd-cl-hh24.eps}
+\end{tabular}
+\caption{
+  Comparison of Intel (i7-7800x) and AMD (EC2 c5a.large, 7R32 chip) performance.
+  In both cases, for long strings, HalftimeHash with 24 bytes of output is faster than clhash and UMASH.
+}
+\end{figure*}
+
+\begin{table*}
+\begin{tabular}{cccc}
+\includegraphics[width=9cm]{amd-16.eps}
+&
+\includegraphics[width=9cm]{amd-24.eps}
+\end{tabular}
+\caption{AMD performance.
+  AMD chips do not have AVX-512 instructions, so blocks of that size are simulated with two AVX2 registers.
+  Using a block size of 256 bits performs better.}
+\end{table*}
+
 
 % gnuplot> set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"; set output 'speed-v-epsilon.eps'; set xlabel 'nanoseconds per byte'; set ylabel 'collision probability'; set title "Speed vs. collision (lower left is better)"; unset key; set logscale y 2; unset logscale x; set grid; set yrange[1e-50:1e-10]; set xrange[0.0:0.08]; unset offsets; set xrange[0.0:0.08]; set format y '2^{%L}'; plot 'points-example.txt' using 1:2:3 with labels point pt 7 offset char 0,1
 
 TODO: compare to VHASH
 
-HalftimeHash24, when composed with SipHahs or tabulation hashing as a final step, passes all SMHasher tests.
+HalftimeHash24, when composed with SipHash or tabulation hashing as a final step, passes all SMHasher tests.
 This is faster in SMhasher's bulk speed tests than all other previously tested hash function, excluding \texttt{crc32\_pclmul\_le\_16}, a deterministic 32-bit hash function implemented in assembly in the Linux kernel.
 
 TODO: Notes on SMHasher and relatives
