@@ -82,13 +82,17 @@
 \orcid{0000-0002-8685-9451}
 \email{jbapple@apache.org}
 
+\hypersetup{draft}
+
 \begin{document}
 %\thispagestyle{fancyplain}
 %\thispagestyle{empty}
 
 \begin{abstract}
 HalftimeHash is a new algorithm for hashing long strings.
-The goals are low ``collisions'' (different inputs that produce identical output hash values), high throughput, and {\em longevity} -- HalftimeHash should be easy to implement correctly on new ISAs and easy to code in almost any programming language.
+The goals are low collisions (different inputs that produce identical output hash values), high throughput, and {\em longevity} -- HalftimeHash should be easy to implement correctly on new ISAs and easy to code in almost any programming language.
+
+Compared to the fastest algorithm on long strings, clhash, HalftimeHash decreases collision probability while also increasing throughput by over 100\%.
 \end{abstract}
 
 \maketitle
@@ -120,7 +124,7 @@ The source code, data, and/or other artifacts have been made available at \url{\
 %%% VLDB block end %%%
 
 \section{Introduction}
-A hash family is a map from a set of seeds, $S$ and a domain $D$ to a codomain $C$.\footnote{Seeds are sometimes called {\em salts} or {\em keys}. Given that elements of the domain of hash functions are also sometimes called {\em keys}, this work will avoid this term altogether, for the sake of clarity.}
+A hash family is a map from a set of seeds $S$ and a domain $D$ to a codomain $C$.\footnote{Seeds are sometimes called {\em salts} or {\em keys}. Given that elements of the domain of hash functions are also sometimes called {\em keys}, this work will avoid this term altogether, for the sake of clarity.}
 A hash family $H$ is called is $\varepsilon$-almost universal (``$\varepsilon$-AU'' or just AU\footnote{Technically, all hash families are 1-AU. In this work, a function will be called AU iff it is $o(1)$-AU.}) when
 \[\forall x,y \in D, x \neq y \implies \mathrm{Pr}_{s \in S}[H(s, x) = H(s, y)] \leq \varepsilon\]
 The intuition behind this definition is that the input to be hashed may night be random, but collisions can still be made unlikely and random by picking randomly from a hash {\em family}, rather than anchoring on a specific hash {\em function}.
@@ -129,25 +133,25 @@ HalftimeHash is a new hash family designed for
 
 \begin{enumerate}
 \item High speed on long strings.
-  This should enable hybrid hash families that hash long strings with HalftimeHash and short strings with a hash family that is designed with short strings in mind. \cite{siphash,umash}
+  This should enable hybrid hash families that hash long strings with HalftimeHash and hash short strings with a hash family that is designed with short strings in mind. \cite{siphash,umash}
 \item Simple implementation that is easily portable between programming languages and machine ISA's.
-\item Tunable output length for applications that require it, such as universally unique identifiers.
+\item Tunable output length for applications that require it, such as one-time authorization. \cite{nacl} 
 \end{enumerate}
 
 For HalftimeHash, the family parameters are:
 
 \begin{description}
-\item[Domain $D$] consists of all strings of length less than $2^{64}$ bytes.
-\item[Codomain $C$] is 16, 24, or 32 bytes.
+\item[Domain $D$] consists of all strings of size less than $2^{64}$ bytes.
+\item[Codomain $C$] is 16, 24, 32, or 40 bytes.
   These are easily expanded to larger sizes.
-\item[Collision probability $\varepsilon$] is less than than $2^{-83}$ bits for input shorter than one exabytes (for the family producing 24 bytes of output), with longer strings producing lower collision possibility.
+\item[Collision probability $\varepsilon$] is less than than $2^{-83}$ bits for input shorter than one exabytes (for the family producing 24 bytes of output), with longer strings producing higher collision probability.
 \item[Seeds $S$] are larger for longer strings in the domain, but are less than 29KB for strings as long as a exabyte.
 \end{description}
 
 HalftimeHash is a ``universe collapsing'' function, designed to hash long strings into short ones. \cite{linear-hash-functions,hashing-without-primes-revisited,cuckoo-journal}
 This differs from short-input families like SipHash, suitable for hashing short strings down to 64 bits, or general purpose families like UMASH, suitable for hashing strings of any length down to 64 bits.
 Universe collapsing functions are especially suitable for pairing with short-input families: when $n$ items are to be handled by a hash-based algorithm, even if they are very long, a universe-collapsing function that reduces them to hash values of length $c \lg n$ bits for some suitable $c \geq 3$ produces no collisions with high probability.
-Short-input families can then be used on those $c \lg n$ bits. \cite{universe-collapse-linear-probing,siphash,tabulation,simple-hash-functions-work}
+Short-input/short-output families can then be used on those $c \lg n$ bits. \cite{universe-collapse-linear-probing,siphash,tabulation,simple-hash-functions-work}
 
 \subsection{Prior work}
 
@@ -155,21 +159,20 @@ Hash family invention is a significant hobbyist community, with a number of fast
 Of these, only cl\-hash and U\-MASH include claims of being AU.
 
 Other previous work on AU hashing long strings is no longer as competitive, performance-wise, as it once was, including UHASH and VHASH.
-UHASH was designed specifically for SIMD speed, but it predates Nandi's breakthrough EHC algorithm and hard-codes the vector width. \cite{umac}
+UHASH was designed specifically for SIMD speed, but it predates Nandi's breakthrough EHC algorithm and hard-codes the SIMD register width. \cite{umac}
 VHASH similarly came about before EHC and is an update to UHASH designed to take advantage of 64-bit architectures, and performs much better than UHASH, but still lags compared to the current fastest hash families. \cite{vmac,smhasher}
 
 \subsection{Results}
 
 HalftimeHash uses less than 1000 lines of code in C++, does not use any assembly, and makes spare use of the C++ standard library.
 It can take advantage of vector ISA extensions like AVX-512, AVX2, and SSE, but it also runs on the C++ virtual machine model with no architecture-specific features.
-It is a parameterized algorithm that supports updates when vector sizes increase or longer hash values are needed.
-On strings longer than 1KB, some variants are up to 130\% faster than CLHASH, the AU hash family that comes closest in performance to HalftimeHash.
+It is a parameterized algorithm that supports straightforward creation of new versions with larger SIMD register sizes or longer output hash values.
+On strings longer than 1KB, some variants are up to 130\% faster than clhash, the AU hash family that comes closest in performance to HalftimeHash.
 
 \section{Conventions}
 
 $H$ and $G$ will denote hash families.
-Generally, capital letters will denote sets or functions, including linear transformations.
-Linear transformations and their matrices are discussed interchangeably; any vector space basis will do.
+Generally, capital letters will denote sets or functions, including matrices.
 
 Lowercase letters will usually represent strings or non-negative integers.
 $n$ generally denotes the size of the input string, usually in 64-bit words.
@@ -178,12 +181,12 @@ Arithmetic operations may be over elements of $\ints_m$, $\ints$, or sometimes $
 
 Subscripts used to indicate a numbered component of a sequence, usually numbered from 0.
 
-$\varepsilon$ is called the {\em collision probability} of $H$; it is inversely related to $H$'s {\em entropy}, $-\lg \varepsilon$.
+$\varepsilon$ is called the {\em collision probability} of $H$; it is inversely related to $H$'s {\em output entropy}, $-\lg \varepsilon$.
 By convention, the entropy of a hash family with collision probability of $0$ is $+\infty$.
 (An example of a hash family like this is the identity function variant $(s, x) \mapsto x$.)
 
 HalftimeHash takes two arguments, the {\em seed} and the {\em input}.
-The seed is sometimes referred as {\em input entropy}, which is distinguished from $-\lg \varepsilon$ both because it is input and because it is measured in words or bytes, not as an implicit aspect of the output and measured in bits.
+The seed is sometimes referred as {\em input entropy}, which is distinguished from $-\lg \varepsilon$ both because it is and explicit part of the input and because it is measured in words or bytes, not bits.
 
 Each step of HalftimeHash applies various transforms to groups of input values.
 These groups are called {\em instances}.
@@ -199,13 +202,14 @@ All machine integers are unsigned.
 
 HalftineHash produces output that is collision resistant among strings of the same length.
 Adding collision resistance between strings of different lengths to such a hash family requires only appending the length at the end of the output.
-This turns, for instance, a hash family that produces 24 bytes of output from a string of length less than $2^64$ into a hash family that produces 32 bytes of output.
+This turns, for instance, a hash family that produces 24 bytes of output from a string of length less than $2^{64}$ into a hash family that produces 32 bytes of output.
 
 The main portion of the text describes a particular instantiation of HalftimeHash that produces 24 bytes of output.
 This will be generalized in the analysis section.
 Variants will be specified by their number of output bits: HalftimeHash16, HalftimeHash24, HalftimeHash32, or HalftimeHash40.
 
-Except where otherwise mentioned, all benchmarks were run on an Intel i7-7800x, running Ubuntu 18.04, with g++ 10.1.0-2ubuntu1~18.04.
+Except where otherwise mentioned, all benchmarks were run on an Intel i7-7800x, running Ubuntu 18.04, with g++ 10.1.0-2ubuntu1$\sim{}$18.04.
+%For each machine configuration, we show the graph of the best performing compiler for each hash family, as defined by the throughput on input strings of length 250KB.
 
 \section{Algorithm}
 \label{algo}
@@ -213,24 +217,24 @@ Except where otherwise mentioned, all benchmarks were run on an Intel i7-7800x, 
 \subsection{Overview}
 
 The macrostructure of HalftimeHash is in the style of tree hash, as described by Carter and Wegman. \cite{carter-wegman-79}
-The leaves of a tree are the characters of the input string, while the root is the output hash value.
+The leaves of a tree are the words of the input string, while the root is the output hash value.
 Each level of edges is represented by a single hash function chosen at random from an AU family.
 
 Algebraically, a tree hash family consists of an alphabet $\Sigma$ and a set of almost-universal hash families $H_1, H_2, \dots$.
-The domain of $H_1$ is $\Sigma^k$ for some $k$.
-If the codomain of $H_i$ is $C$, the domain of $H_{i+1}$ is $C^k$ for some $k$.
+The domain of $H_1$ is $\ints_{2^{64}}^{k_i}$, and the codomain is $\ints_{2^{64}}$
+
 Each execution of a tree hash family is defined recursively.
 An execution of height $1$ is a pair consisting of an input and output value for $H_1$.
-An execution of height $n+1$ is $m$ applications of level $n$, where $m$ is the dimension of the domain of $H_{n+1}$ over the codomain of $H_n$, along with the output value that is the result of applying $H_{n+1}$ to the output values of the $k$ applications of level $n$.
+An execution of height $n+1$ is $k_n$ applications of level $n$ along with the output value that is the result of applying $H_{n+1}$ to the output values of the $k_n$ applications of level $n$.
 
-More concretely, $H1(a,b)$ is a tree hash execution of height 1, $H2(H1(a,b), H1(c,d)$ is a tree hash execution of height 2, and so on.
+More concretely, $H_1(a,b)$ is a tree hash execution of height 1, $H_2(H_1(a,b), H_1(c,d))$ is a tree hash execution of height 2, and so on.
 
-Carter and Wegman show that if each $H_i$ is $\varepsilon_i$-AU, then an application of height $n$ is $\sum_{i=1}^n \varepsilon_i$-AU.
+Carter and Wegman show that if each $H_i$ is $\varepsilon_i$-AU, then a tree of height $m$ is $\sum_{i=1}^m \varepsilon_i$-AU.
 %The Badger construction (\cite{badger}) shows how to manage strings where there is a mismatch in the input and output arity at some levels without negatively impacting the universality.
 
 A novel implementation choice in HalftimeHash is using an erasure coding of the input in the leaves.
 The central idea is called ``EHC'', for {\em Encode, Hash, Combine}. \cite{ehc-nandi}
-The application of the erasure code adds ``minimum distance'' $d$, so that any two input values that differ in any location produce encoded outputs that differ in $d > 1$ locations.
+The application of the erasure code adds ``minimum distance'' $d$, so that any two input values that differ in any location produce encoded outputs that differ in at least $d > 1$ locations.
 This decreases the probability of collisions by a factor of $\varepsilon^{d-1}$.
 
 \includegraphics[width=8cm]{Diagram2.eps}
@@ -241,7 +245,7 @@ This decreases the probability of collisions by a factor of $\varepsilon^{d-1}$.
 }
 
 This section focuses on a particular instantiation of this formula with distance $3$, producing a hash value $24$ bytes in size.
-Adding variants with different distances is direct, and the benchmarking results below include variants with distance $2$ and distance $4$.
+Adding variants with different distances is direct, and the benchmarking results below include variants with distance 2, 4, and 5.
 
 TODO: VTune on l3 latency and RAM bandwidth limitations
 
@@ -257,24 +261,23 @@ The definition of NH is:
 $$\sum_{i=0}^m (d_{2i} + s_{2i})(d_{2i+1} + s_{2i+1})$$
 
 The additions are in the ring $\ints_{2^{32}}$, while the multiplication is in the ring $\ints_{2^{64}}$.
-Unusually, NH has only $32$ bits of entropy; typically universal families with $64$ bits of output have nearly $64$ bits of entropy. \cite{umash,clhash}
+Unusually, NH has only $32$ bits of output entropy; typically universal families with $64$ bits of output have nearly $64$ bits of entropy. \cite{umash,clhash}
 With NH, typically one of a number of other algorithms is used in a final additional step to reduce the size of the output to $32$ bits.
 Creating additional output entropy bits is usually done by running the algorithm twice. \cite{umash,umac}
-Despite this potential extra hashing (depending on needed entropy), NH has been wildly successful.
-It is used in UMAC \cite{umac}, VMAC \cite{vmac}, CLHASH \cite{clhash}, UMASH \cite{umash}, XXH3 \cite{xxh3}, and more, usually with $k = 64$.
+Despite this potential extra hashing (depending on needed entropy), NH has been widely used in hash families such as UMAC \cite{umac}, VMAC \cite{vmac}, clhash \cite{clhash}, UMASH \cite{umash}, XXH3 \cite{xxh3}, and more, usually with $k = 64$.
 
-In HalftimeHash, no 64-bit-mul\-ti\-pli\-ca\-tions are needed - no 64-bit values are multiplied with each other.
+In HalftimeHash, no 64-bit-mul\-ti\-pli\-ca\-tions are needed.
 This is in support of two goals --
 the first is portability to platforms or programming languages without native unsigned 64-bit-by-64bit-yielding-128-bit multiplications.
 Languages like Java, Python, and Haskell can do these long multiplications, but not without slipping into arbitrary-precision-integer code, decreasing performance substantially.
-Many programming languages do not include a way to perform native carryless (aka polynomial) multiplication, which is the central operation in the formerly fastest AU hash functions. \cite{umash,clhash}
+Many programming languages do not include a way to perform native carryless (aka polynomial) multiplication, which is the central operation in the fastest AU hash functions other than HalftimeHash. \cite{umash,clhash}
 
 TODO: check this
 
 TODO: what about JavaScript
 
 The other is SIMD-friendliness.
-The x86-64 ISA extensions SSE2, AVX2, and AVX512F all contain instruction to simultaneously multiply multiple pairs of 32-bit words, producing 64-bit values.
+The x86-64 ISA extensions SSE2, AVX2, and AVX-512F all contain instruction to simultaneously multiply multiple pairs of 32-bit words, producing 64-bit values.
 Aarch64 has similar instructions in the NEON set, and, unlike x86-64 chips, it cannot produce a single 128-bit product out of two 64-bit multiplicands with one instruction -- each half of the product requires its own instruction.
 % The POWER ISA also contains this, but only on 128 bits at once?
 
@@ -285,9 +288,9 @@ Aarch64 has similar instructions in the NEON set, and, unlike x86-64 chips, it c
 Another appealing aspect of the NH primitive is that it is not only almost-universal, it is also {\em$ \varepsilon$-almost $\Delta$-universal} ($\varepsilon$-A$\Delta$U):
 \[\forall \delta \in C, \forall x,y \in D, x \neq y \implies \mathrm{Pr}_{s \in S}[H(s, x) - H(s, y) = \delta] \leq \varepsilon \]
 Almost-$\Delta$ universality reduces the number of multiplications required.
-Given an almost-$\Delta$ universal family $H$ from $D$ to $C$, define a hash family $H'$ from $D \times C$ to $C$ as $H'_s ((d, x)) \triangleq H_s(d) + x$, for $x \in C$; $H'$ is AU, though not A$\Delta$U.
-This saves a multiplication over a construction like $H_s(d) + G_{s'}(x)$ (for any almost-universal family $G$ from $C$ to $C$).
-In HalftimeHash, the multiplication savings tradeoff with increased entropy requirements via a parameter the caller can set called ``fanout''
+Given an almost-$\Delta$ universal family like $H$ from $C^k$ to $C$ for any $k \geq 1$, define a hash family $H'$ from $C^{k+1}$ to $C$ as $H'_s (d, x) \triangleq H_s(d) + x$, for $x \in C$; $H'$ is AU, though not A$\Delta$U.
+This saves a multiplication over a construction like $H_s(d) + H_{s'}(x)$.
+In HalftimeHash, the multiplication savings trade off with increased entropy requirements via a parameter the caller can set.
 %The default is 8, saving $12.5\%$ of the erstwhile $n/8 \pm O(1)$ multiplications to hash strings of length $n$.
 
 %Now we can build the hash function referenced above, which takes a Block of values and a Block of entropy, spitting out a hashed Atom that can later be collapse via %addition to yield the almost-delta-universal NH family.
@@ -309,7 +312,7 @@ At the leaves of the tree, HalftimeHash uses an algorithm from Nandi called ``EH
 \end{enumerate}
 
 Nandi proves that if the hash family used in step 2 is $\varepsilon$-A$\Delta$U, then the output of step 3 is $\varepsilon^d$-A$\Delta$U.
-To avoid expensive operations over finite fields, HalftimeHash uses a non-linear erasure code and a linear transformation $T$ with a looser constraint on the invertability; see below.
+In contrast, to avoid slow operations over finite fields, HalftimeHash uses a non-linear erasure code and a linear transformation $T$ with a looser constraint on the invertability; see below.
 
 Additionally, the other components of HalftimeHash do not depend on EHC being A$\Delta$U, only AU.
 Just as in NH, this saves HalftimeHash a percentage of multiplications.
@@ -319,7 +322,7 @@ See Section \ref{analysis} for more details.
 
 One key aspect of the efficiency of HalftimeHash is that the additional size added by encoding the input string is low as a percentage of the total hashed data.
 %By the Singleton bound, A code with minimum distance $d$ must be at least $d-1$ characters longer than the pre-encoded data.
-In order to use large blocks, the dimension of the vector space that is the domain of $T$ must grow as well.
+In order to use large blocks, the matrix $T$ must grow as well.
 For finite fields, this is not an issue, but in $\ints_{2^{64}}$, as discussed below, it becomes a constraint satisfaction problem to find matrices that preserve entropy.
 %While this work can be done offline, it's not obvious the effort will yield good results.
 
@@ -346,7 +349,7 @@ The second tuple is the following sum, numbering the input words as $(x_0, y_0, 
   \end{array}
 \end{displaymath}
 
-While {\em linear} erasure codes on $\ints_2$ exist, they do not achieve as high a signal-to-noise ratio.
+While {\em linear} erasure codes on $\ints_2$ exist, they do not achieve as high a signal-to-noise ratio. \cite{codetables.de}
 
 \subsubsection{Transform cost}
 
@@ -474,21 +477,21 @@ uint32_t TreeHash(uint32_t input[], size_t length) {
 \end{lstlisting}
 
 While this is direct and simple, the recursion produces slowdowns of up 10x or more over HalftimeHash's iterative depth-first post-order approach.
-In this approach, a stack with height logarithmic in the size of the input is explicitly created to hold intermediate results; each level is large enough to store \texttt{fanout} Blocks.
+In this approach, a stack with height logarithmic in the size of the input is explicitly created to hold intermediate results; each level is large enough to store some user-tunable number of Blocks, $f$.
 To hash a string while traversing it, an input block is first hashed with EHC, with the output stored in the lowest level of the stack.
-This continues until the lowest level of the stack is full (contains \texttt{fanout} Blocks).
-When the next call of EHC is about to be made, HalftimeHash hashes the lowest level in the stack and puts it output in the next level of the stack.
+This continues until the lowest level of the stack is full (contains $f$ Blocks).
+When the next call of EHC is about to be made, HalftimeHash hashes the lowest level in the stack with AU NH and puts it output in the next level of the stack.
 This leaves room for the output of EHC in the lowest level.
 A similar process happens further up the stack when higher levels are full.
 
-The stack evolution is equivalent to iteration in a number system in which
+The stack evolution is equivalent to iteration in a redundant zeroless number system in base $f$; for examples of the application of number systems to data structures, see \cite{redundant-zeroless}.
 
-\begin{itemize}
-\item The empty sequence is a number; it represents the value $0$.
-\item All non-empty sequences contain as their elements digits between $1$ and \texttt{fanout}.
-\item The value of a sequence is just as in a \texttt{fanout}-ary number system, with the added redundancy of \texttt{fanout} being a permitted digit.
-  For example, the number $(2,3)$ represents $2\cdot\texttt{fanout} + 3$, and $(1,0,0)$ represents the same number as $(\texttt{fanout},0)$.
-\end{itemize}
+%% \begin{itemize}
+%% \item The empty sequence is a number; it represents the value $0$.
+%% \item All non-empty sequences contain as their elements digits between $1$ and \texttt{fanout}.
+%% \item The value of a sequence is just as in a \texttt{fanout}-ary number system, with the added redundancy of \texttt{fanout} being a permitted digit.
+%%   For example, the number $(2,3)$ represents $2\cdot\texttt{fanout} + 3$, and $(1,0,0)$ represents the same number as $(\texttt{fanout},0)$.
+%% \end{itemize}
 
 %% One way to think about this is as a number system - each level represents a place, and the digits run from $1$ to \texttt{fanout}.
 %% (Three Blocks count as ``1'', six as ``2'', and so on.)
@@ -502,11 +505,11 @@ The stack evolution is equivalent to iteration in a number system in which
 
 \subsection{Cleanup}
 
-One the tree hash portion of HalftimeHash is complete, there still remains data to hash.
+Once the tree hash portion of HalftimeHash is complete, there still remains data to hash.
 
 First, the tree hash leaves data in its stack - as much as $3bf$ words of data per level, where $b$ is the size of a SIMD register (in 64-bit words) and $f$ is \texttt{fanout}.
 
-In addition to the data on the stack, there are $b$ characters that have yet to be hashed at all since HalftimeHash's EHC design expects to be fed $7 \cdot 3 = 21$ blocks of data at each invocation.
+In addition to the data on the stack, there are some characters that have yet to be hashed at all since HalftimeHash's EHC design expects to be fed $7 \cdot 3 = 21$ words at each invocation, and no fewer, so there are words remaining at the end of the input string.
 
 HalftimeHash uses three NH hash applications to complete the operation.
 First, it feeds every hash value in the stack to the corresponding NH execution.
@@ -580,6 +583,26 @@ HalftimeHash has the following steps that will be analyzed in order:
 
 A summary of the conclusions is in Table \ref{analysis-table}.
 
+\begin{table*}
+\begin{tabular}{|l|c|c|c|c|c|c|c|}
+  \hline {\bf Step} & {\bf Mults (each)} & {\bf In Entropy (each)} & {\bf Out Entropy (each)} & {\bf Height} & {\bf Number} & {\bf Out words total}\\
+  \hline EHC & $e(w-1)$ & $e(w-1)$ & $(32-p)k$ & 1 & $\lfloor n/dw \rfloor$ & $k \lfloor n/dw \rfloor$ \\
+  \hline Tree Hash & $f-1$ & $f-1$ & $32k$ & $\left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ & $k \lfloor n / d w \rfloor$ / f & $f k \left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ \\
+  \hline Cleanup stack & $b f k \left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ & $b f k \left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ & $32k$ & 1 & 1 & $k$ \\
+  \hline Cleanup input & $b d k w$ &  $b d w + k - 1$ & $32k$ & 1 & 1 & $k$ \\
+  \hline (Opt.) Tabulation & 0 &  $2^{11}k$ & $61 - \lg k$ & 1 & 1 & 1 \\
+  \hline
+\end{tabular}
+\caption{\label{analysis-table}
+  Statistics for number of multiplications, amount of input entropy (in 64-bit words), and output entropy (counted in bits) of each step in HalftimeHash.
+  Additionally, each step has a height and width listed.
+  Height is the longest dependency chain between executions of the primitive in the listed step.
+  Number is the total number of executions of that primitive in an execution of HalftimeHash.
+  The multiplications in total for a step is the product of the multiplications in each times the number of executions of that primitive.
+  The collision probability is the product of the height and the collision probability of each execution of the primitive.
+}
+\end{table*}
+
 \subsection{EHC}
 
 In each EHC execution, $dw$ words are read in.
@@ -594,6 +617,7 @@ This uses $e(w - 1)$ words of input entropy and performs $e(w - 1)$ multiplicati
 \begin{proof}
 As a reference and a warm-up, here is a way of viewing the corresponding proof from the original EHC paper:
 in an environment in which the EHC matrix product is over a finite field, EHC is $2^{-32k}$-AU.
+Let $\bar{H}$ be the hash function of applying $H$ pointwise to each $s_i$ and $x_i$ or $y_i$: $\bar{H}(s, x) = H(s_i, x_i)$.
 Given that $x$ and $y$ differ, let $\bar{x}$ and $\bar{y}$ be their encodings and $F$ be $k$ locations where $\bar{x}_i \neq \bar{y}_i$.
 Let $W$ be the matrix formed by the columns of $T$ where the column index is in $F$.
 We want to bound
@@ -614,9 +638,9 @@ Since the $s_i$ are all chosen independently, the probability of the conjunction
 \Pr_s[W H(s,\bar{x}) = W H(s,\bar{y})] \leq \varepsilon^k
 \]
 
-\paragraph{In HalftimeHash, this unravels at the reliance upon the trivial kernel of $W$.}
+\paragraph{In HalftimeHash, this proof unravels at the reliance upon the trivial kernel of $W$.}
 
-The columns of $T$ in HalftimeHash are linearly independent in $\ints$, so the matrix $W$ is non-singular in $\ints^{k\times{}k}$, but not necessarily non-singular in $\ints_{2^{64}}^{k\times{}k}$ because $\ints_{2^{64}}$ has zero divisors: every even number.
+The columns of $T$ in HalftimeHash are linearly independent in $\ints$, so the matrix $W$ is non-singular in $\ints^{k\times{}k}$, but not necessarily non-singular {\em in $\ints_{2^{64}}^{k\times{}k}$} because every even number in $\ints_{2^{64}}$ is a zero divisor.
 
 However, even in non-field rings like $\ints_{2^{64}}$, every matrix $A$ has a kind of pseudo-inverse $A^?$ such that $A \cdot A^? = A^? \cdot A = \det(A) I$.
 This pseudo-inverse is just $\det(A)$ times the inverse of $A$ in $\rats^{k\times{}k}$.
@@ -650,8 +674,8 @@ Combined with the classic result by Carter and Wegman of tree hashing's collisio
 Since $m = \lfloor n / d w \rfloor$, where $n$ is the length of the input in 64-bit words, the resulting collision probability overall is $\left(\left\lfloor \log_f \lfloor n / d w \rfloor \right\rfloor 2^{-32}\right)^k$
 \end{proof}
 
-The amount of entropy needed also corresponds to the height of the tree, $\left\lfloor\log_f \lfloor n/dw\rfloor\right\rfloor$, with $f - 1$ words needed for every level.
-Here, HalftimeHash uses different seeds for the $k$ different trees to maintain independence of the entropy in the words of the output values, so the total number of 64-bit seeds used in the tree hash step is \[k(f-1)\left\lfloor\log_f \lfloor n/dw\rfloor\right\rfloor\]
+The amount of entropy needed is proportional to the height of the tree, $\left\lfloor\log_f \lfloor n/dw\rfloor\right\rfloor$, with $f$ words needed for every level.
+Here, HalftimeHash uses different seeds for the $k$ different trees to maintain independence of the entropy in the words of the output values, so the total number of 64-bit words of entropy used in the tree hash step is \[f k\left\lfloor\log_f \lfloor n/dw\rfloor\right\rfloor\]
 
 In the limit the number of multiplications performed is nearly identical to the number of input words.
 Of each $m$ words fed into the tree hash phase, $7/8$ths of them are multiplied by something in the first level.
@@ -660,10 +684,10 @@ Since each level is identical (except for seeds), this continues, approaching 1 
 \subsection{Cleanup}
 
 There can be as many as as $f b h$ words of data in each of the $k$ stacks used for tree hashing.
-For this data, HalftimeHash uses NH, which takes $f k b h$ words of entropy and just as many multiplications
+For this data, HalftimeHash uses NH, which uses $f k b h$ words of entropy and just as many multiplications
 
 There can also be as much as $b d w$ words of data in the raw input that are untouched so far by HalftimeHash.
-Again, NH is used, but this time hashing $k$ times, since this data has not gone through EHC.
+Again, NH is used, but now hashing $k$ times, since this data has not gone through EHC.
 That requires $b d w k$ words of entropy and just as many multiplications.
 
 For the untouched data, the number of words of entropy needed can be reduced by nearly a factor of $k$ using the Toeplitz construction. 
@@ -685,7 +709,7 @@ The combined input entropy needed is
 
 \[
 e(w-1)
-+ k(f-1)\left\lfloor\log_f \lfloor n/dw\rfloor\right\rfloor
++ f k \left\lfloor\log_f \lfloor n/dw\rfloor\right\rfloor
 + f k b \left\lfloor\log_f \lfloor n/dw\rfloor\right\rfloor
 + b d w + k - 1
 \]
@@ -693,31 +717,19 @@ e(w-1)
 When $b$ is 8, as in the AVX-512 version of HalftimeHash, this is less than 31KB for strings of length up to one exabyte -- 8.8KB for strings of length up to one megabyte.
 6.1KB of this is for hashing the stack.
 
-The number of multiplications is asymptotically driven by the EHC step
+The number of multiplications is asymptotically driven by the EHC step, since the total is
 
 \[
 en(w-1)/dw + nk/dw + f k b \left\lfloor\log_f \lfloor n/dw\rfloor\right\rfloor + b d w k
 \]
 
 \[
-((e(w-1) + k)/dw)n + O(\log_f n)
+= ((e(w-1) + k)/dw)n + O(\log n)
 \]
 
 For a string of length 1MB, 84\% of the multiplications happen in the EHC step, and the number of multiplications is about one per ten bytes of input.
 Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in the EHC step.
 
-\begin{table*}
-\begin{tabular}{|l|c|c|c|c|c|c|c|}
-  \hline {\bf Step} & {\bf Mults (each)} & {\bf In Entropy (each)} & {\bf Out Entropy (each)} & {\bf Height} & {\bf Number} & {\bf Out words total}\\
-  \hline EHC & $e(w-1)$ & $e(w-1)$ & $(32-p)k$ & 1 & $\lfloor n/dw \rfloor$ & $k \lfloor n/dw \rfloor$ \\
-  \hline Tree Hash & $f-1$ & $f-1$ & $32k$ & $\left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ & $k \lfloor n / d w \rfloor$ / f & $f k \left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ \\
-  \hline Cleanup stack & $b f k \left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ & $b f k \left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ & $32k$ & 1 & 1 & $k$ \\
-  \hline Cleanup input & $b d k w$ &  $b d w + k - 1$ & $32k$ & 1 & 1 & $k$ \\
-  \hline (Opt.) Tabulation & 0 &  $2^{11}k$ & $61 - \lg k$ & 1 & 1 & 1 \\
-  \hline
-\end{tabular}
-\caption{\label{analysis-table}stats}
-\end{table*}
 
 
 %% \begin{tabular}{|l|c|c|c|c|c|c|}
@@ -792,95 +804,65 @@ Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in th
 %% We will see below that if the input to two different calls to \texttt{EhcUpperLayer} differ in one bit of input, they differ in all three partitions with high probability.
 %% As such, the output of \texttt{EhcUpperLayer} differs for different input with probabilty $1 - ({2^{-32}})^3$.
 
-%% \begin{table*}
-%%   \begin{tabular}{|rr|c|c|c|}
-%%     \hline
-%%     &\bf{Step} & \bf{Entropy provided (bits)} & \bf{Entropy required (bytes)} & \bf{Output (bytes)}\\
-%%     \hline \hline & EHC & 90 & 216 & $b k \lfloor n / b d i_w \rfloor$  \\
-%%     \hline & Treehash & $96 - 3 \lg \lfloor \log_f(kn / di_w) \rfloor$ & $24f\lfloor\log_f(kn / di_w)\rfloor$ \\
-%%     \hline \multirow{2}{*}{Cleanup} & stack & \multirow{2}{*}{96 (each and total)} & $3bf\lfloor \log_f(kn / di_w) \rfloor$ \\
-%%     & remainder &  & $63b$ \\
-%%     \hline \hline
-%%     \multicolumn{4}{|c|}{\textit{\textbf{Generalized}}}\\
-%%     \hline \hline
-%%     & EHC & $k(33-k)$ & $8ei_w$ \\
-%%     \hline &Treehash  & $32k - k\lg\lfloor \log_f(kn / di_w) \rfloor$ & $8fk\lfloor\log_f(kn / di_w)\rfloor$ \\
-%%     \hline \multirow{2}{*}{Cleanup} & stack & \multirow{2}{*}{$32k$ (each and total)} & $bfk\lfloor \log_f(kn / di_w) \rfloor$ \\
-%%     & remainder &  & $bdi_wk$ \\
-%%     \hline
-%%   \end{tabular}
-%%   \caption{Notation: $d$ is the {\em dimension} of the erasure code and $e$ is the {\em block size}. For the main example in this paper, $(d, e) = (7, 9)$. $k$ is output width. For the codes in this paper, $k = e - d + 1$, which makes them {\em MDS codes}. The input width is $i_w$; this represents one measure (the other is $b$) of the size of the blocks of data fed into the encode and then hash steps of EHC. It is a user-tunable integer parameter of at least 1 that can increase performance by increased ILP. For codes like the $(7, 9)$ code that treat their input like 3-tuples, $i_w$ must be divisible by 3. $b$ is \texttt{sizeof(Block)}. $n$ is the string length in bytes. $f$ is fanout, a user-adjustable integer parameter of at least 2 that can increase the entropy provided at the cost of increasing the entropy required. }
-%%   \label{entropy-table}
-%% \end{table*}
-
-%% \begin{table*}
-%%   \begin{tabular}{|r|c|c|c|c|}
-%%     \hline \bf{Step}     & \bf{input} & \bf{Entropic input} & \bf{output} & \bf{Entropic output} \\
-%%     \hline
-%%     \hline EHC, per word & $di_w$ & $ei_w$ & $k$ & $k(32 - p)$ \\
-%%     \hline EHC, per block & $bdi_w$ & $ei_w$ & $bk$ & $k(32 - p)$ \\
-%%     \hline EHC, per string & $\lfloor n/bdi_w \rfloor$ & $ei_w$ & $bk\lfloor n/bdi_w \rfloor$ & $k(32 - p)$ \\
-%%     \hline Treehash, per partition-word (aka NH) & $f$ & $f-1$ & $1$ & $32$ \\
-%%     \hline Treehash, per partition & $bf$ & $f-1$ & $b$ & $32$ \\
-%%     \hline Treehash, per node & $bfk$ & $ k(f-1)$ & $bk$ &  $32 k$ \\
-%%     \hline Treehash of height $h$ & $kbf^h \leq m \leq kb(f^h-1)/(f-1)$ & $hk(f-1)$ & $\leq bfhk$ & $k(32-h)$ \\
-%%     \hline Cleanup stack per-partition & $bfh$ & $bfh$ & $1$ & $32$ \\
-%%     \hline Cleanup stack & $bfhk$ & $bfhk$ & $k$ & $32k$ \\
-%%     \hline Cleanup remainder & $bdi_w$ & $kbdi_w$ & $k$ & $32k$ \\
-%%     \hline
-%%   \end{tabular}
-%%   \caption{
-%%     The height of the tree, $h$, is proportional to the logairthm of the number of input words.
-%%     The output of EHC is of size $bk\lfloor n/bdi_w \rfloor$.
-%%     Each level of treehash reduces this size
-%%     \\
-%%     Notation: $d$ is the {\em dimension} of the erasure code and $e$ is the {\em block size}. For the main example in this paper, $(d, e) = (7, 9)$. $k$ is output width. For the codes in this paper, $k = e - d + 1$, which makes them {\em MDS codes}. The input width is $i_w$; this represents one measure (the other is $b$) of the size of the blocks of data fed into the encode and then hash steps of EHC. It is a user-tunable integer parameter of at least 1 that can increase performance by increased ILP. For codes like the $(7, 9)$ code that treat their input like 3-tuples, $i_w$ must be divisible by 3. $b$ is \texttt{sizeof(Block) / sizeof(uint64\_t)}. $n$ is the string length in bytes. $f$ is fanout, a user-adjustable integer parameter of at least 2 that can increase the entropy provided at the cost of increasing the entropy required.
-%%     $p$ is the max power of two that divides a determinant of a $kxk$ matrix in $V$.\\
-%%     s\\
-%%   d}
-%% \end{table*}
-
-%% Figure \ref{entropy-table} generalizes the entropy requirements and guarantees of HalftimeHash.
-%% For the $(7,9)$ code discussed above, the experiments below have been configured to use $f = 8$, $n \leq 10^6$, and $B = 64$.
-%% For these parameters, the maximum entropy used is $216 + 65*64\lfloor\log_8(10^6/192)\rfloor + 63*64 \leq$ 21KiB and the minimum entropy produced is
-%% \[-\lg\left(2^{-90} + 2^{-96}\lfloor\log_8(10^6/192)\rfloor^3 + 2^{-96}\right)\]
-%% \[= 88.99 \textrm{ bits}.\]
-
-%% Increasing the maximum string length to 1 terabyte ($10^{12}$ bytes) decreases the entropy produced to $85.9$ bits while increasing the entropy required to $45.8$KiB.
-
-%   \includegraphics[width=8cm]{benchmark-output/{c5a.l-medium}.eps}
-
-%gnuplot> set xlabel 'input length in bytes'; set ylabel 'output bits of entropy'; set title 'HalftimeHash192 entropy'; unset key; set grid; set logscale x; unset logscale y; set yrange [85:91]; set xrange[1.0:1000000000000.0]; plot -log(2**-96 + 2**-90 + (2**-96)*( floor(log((x < 192 ? 192 : x)/192)/log(8))**3))/log(2)
-
-% gnuplot> set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; set title 'c5a.l'; set key top right; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[0:50]; set xrange[1000:*]; plot 'c5a.large-clang-11-f4ab1fb-13107.txt' using 1:(1.0/ column(2)) lw 0.5,  for [i=3:3] 'c5a.large-clang-11-f4ab1fb-13107.txt' using 1:(1.0/ column(i)) lw 0.5, for [i=4:4] 'c5a.large-clang-11-f4ab1fb-13107.txt' using 1:(1.0/ column(i)) lw 0.5, for [i=5:5] 'c5a.large-clang-11-f4ab1fb-13107.txt' using 1:(1.0/ column(i)) lw 0.5, for [i=6:6] 'c5a.large-gcc-10-f4ab1fb-13107.txt' using 1:(1.0/ column(i)) lw 0.5, for [i=7:7] 'c5a.large-gcc-10-f4ab1fb-13107.txt' using 1:(1.0/ column(i)) lw 0.5, for [i=8:8] 'c5a.large-clang-11-f4ab1fb-13107.txt' using 1:(1.0/ column(i)) lw 0.5, for [i=9:9] 'c5a.large-clang-11-f4ab1fb-13107.txt' using 1:(1.0/ column(i)) lw 0.5
-
-
-% gnuplot> set xrange[1.0:1000000000000.0]; plot 216 + 65 * 64 * ((x < 192) ? 0 : floor(log(x/192) / log(8))) + 63 * 64
-
-% gnuplot> set yrange [85:91]; set xrange[1.0:1000000000000.0]; plot -log(2**-96 + 2**-90 + (2**-96)*( floor(log((x < 192 ? 192 : x)/192)/log(8))**3))/log(2)
-
-% gnuplot> set key top right; set yrange [*:*]; set xrange[1.0:1000000000000.0]; plot -log(2**-64 + 2**-60 + (2**-64)*( floor(log((x < 64 ? 64 : x)/64)/log(8))**2))/log(2)
-
-
 \section{Tests}
 
+This section covers performance testing for HalftimeHash.
+It is compared in various varieties with clhash and UMASH, two AU families that can hash long strings.
+Each of those are based on carryless (or ``polynomial'') multiplication over $\ints_2$ and a version of NH.
 
+HalftimeHash can vary over three dimensions:
 
+\begin{itemize}
+\item Block size, the number of instances interleaved in each execution
+\item Output size, which varies from 16 bytes to 40 bytes
+\item ISA, which varies from the C++ virtual machine (in other words, scalar operations on \texttt{uint32t}s) to AVX-512
+\end{itemize}
+
+A small sample of these are presented here, focused on large block sizes and ISA's with at least AVX2.
+
+\subsection{Throughput vs. output entropy}
+
+Figure \ref{frontier} displays the tension between higher output entropy and higher throughput.
+Adding more output entropy increases the number of multiplications and additions that HalftimeHash has to perform.
+Nandi showed that this is true in the general case, as there is a matching upper and lower bound for the number of non-linear operations to be performed for a certain hash output width.
+
+This Figure also shows the three frontiers emerge, in which for UMASH, either clhash or clhash\_twice is a better choice, in that it has more output entropy and higher throughput.
+HalftimeHash dominated all UMASH and clhash variants tested.
 
 \includegraphics[width=8cm]{speed-v-epsilon.eps}
 \captionof{figure}{
   \label{frontier}
-  Trade-offs for almost-universal string hashing functions on strings of size 250KB.
+  Trade-offs for almost-universal string hashing functions on strings of size 250KB on an i7-7800x with AVX-512.
   The lower left corner is ideal: low execution time and low collision probability.
-  Note that the clhash and UMASH executions are not along the efficient frontier / layer-of-maxima, in that one version of HalftimeHash is always faster and has lower collision probability.
+  Note that the clhash and UMASH executions are not along the efficient frontier / layer-of-maxima, in that one version of HalftimeHash is always faster and has lower collision probability. \protect\cite{layer-of-maxima}
   This contrasts with the case of short strings, where clhash and UMASH have better performance.
 }
 
+%% The configuration matrix consists of four block sized, from 64 to 512 bits, 
+
+%% Another variant of HalftimeHash varies based on the block width.
+%% Variants labelled ``v4'' use 512-bit block, v3, 256 bit blocks, and so on.
+%% The code currently sixteen total variants, with four output widths and four block widths.
+
+%% TODO: Each of the variants of HalftimeHash for different SIMD widths and output size pass all SMhasher tests when finalized with tabulation hashing. \cite{smhasher}
+%% Each also passes the clhash tests.
+%% Additionally, the AVX-512 variants of HalftimeHash16 and HalftimeHash24 exceed all other hash functions in SMhasher in terms of speed.
+
+Figure \ref{output-variants} shows the variation of HalftimeHash throughput between output variants across input sizes.
+
 \includegraphics[width=8cm]{gcc-local-hh4.eps}
 \captionof{figure}{
+  \label{output-variants}
   Different output widths of HalftimeHash.
-  Note that even the longest of these is faster than clhash and UMASH; see Figure \ref{frontier}.
+  Note that even the family with the longest output of 40 bytes is faster than clhash and UMASH; see Figure \protect\ref{frontier}.
+  The sharp drops in performance correspond to the L2 and L3 data cache sizes.
 }
+
+Figure \ref{vs-cl} adds comparisons between clhash, UMASH, and HalftimeHash.
+Although these machines support different ISA vector extensions, the pattern is similar: at high enough volume, HalftimeHash's throughput exceed that of the carryless-multiplication families.
+The ``v3'' after the name indicates block size: v3 means a 256-bit block size, while v4 (the default) means 512-bit block size.
+Figure \ref{block-size} shows how the smaller block size performs better on the AMD chip.
+Cross-machine workloads ro persistent hash values may require a consistent block size between machines with different maximum SIMD register sizes, but Figure \ref{block-size} shows the performance penalty is not unreasonable.
 
 \begin{figure*}
 \begin{tabular}{cccc}
@@ -889,8 +871,12 @@ Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in th
 \includegraphics[width=9cm]{amd-cl-hh24.eps}
 \end{tabular}
 \caption{
+  \label{vs-cl}
   Comparison of Intel (i7-7800x) and AMD (EC2 c5a.large, 7R32 chip) performance.
+  These AMD chips do not support AVX-512, but still HalftimeHash with 256-bit registers exceeds the speed of clmul-based hashing methods by up to a factor of two on long strings.
   In both cases, for long strings, HalftimeHash with 24 bytes of output is faster than clhash and UMASH.
+  HalftimeHash24 also has lower collision probability.
+  For long strings, the incremental cost of hashing the 24 bytes down to 8 with tabulation hashing is insignificant.
 }
 \end{figure*}
 
@@ -900,172 +886,37 @@ Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in th
 &
 \includegraphics[width=9cm]{amd-24.eps}
 \end{tabular}
-\caption{AMD performance.
+\caption{
+  \label{block-size}
+  AMD performance.
   AMD chips do not have AVX-512 instructions, so blocks of that size are simulated with two AVX2 registers.
   Using a block size of 256 bits performs better.}
 \end{table*}
 
+%% TODO: compare to VHASH
 
-% gnuplot> set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"; set output 'speed-v-epsilon.eps'; set xlabel 'nanoseconds per byte'; set ylabel 'collision probability'; set title "Speed vs. collision (lower left is better)"; unset key; set logscale y 2; unset logscale x; set grid; set yrange[1e-50:1e-10]; set xrange[0.0:0.08]; unset offsets; set xrange[0.0:0.08]; set format y '2^{%L}'; plot 'points-example.txt' using 1:2:3 with labels point pt 7 offset char 0,1
+%% HalftimeHash24, when composed with SipHash or tabulation hashing as a final step, passes all SMHasher tests.
+%% This is faster in SMhasher's bulk speed tests than all other previously tested hash function, excluding \texttt{crc32\_pclmul\_le\_16}, a deterministic 32-bit hash function implemented in assembly in the Linux kernel.
 
-TODO: compare to VHASH
+%% TODO: Notes on SMHasher and relatives
 
-HalftimeHash24, when composed with SipHash or tabulation hashing as a final step, passes all SMHasher tests.
-This is faster in SMhasher's bulk speed tests than all other previously tested hash function, excluding \texttt{crc32\_pclmul\_le\_16}, a deterministic 32-bit hash function implemented in assembly in the Linux kernel.
-
-TODO: Notes on SMHasher and relatives
-
-%% \includegraphics[width=8cm]{benchmark-output/m5zn-medium.eps}
-%% \captionof{figure}{HalftimeHash's performance on m5zn EC2 nodes compared to other AU families. Performance cliffs correspond to L1 and L2 cache sizes.}
-
-%% \includegraphics[width=8cm]{benchmark-output/entropy-bpb.eps}
-%% \caption{The output entropy provided by the main HalftimeHash variant presented in this text.
-%%   The output size of this variant is 192 bits (or 256, including the input length).
-%%   For strings up to a terabyte long, the entropy doesn't fall below 85 bits.
-%% }
-
-%% \includegraphics[width=8cm]{benchmark-output/{c5a.l-medium}.eps}
-%% \captionof{figure}{AMD performance.
-%%   Using one AVX2 register as the block size is more efficient than using two as an ad-hoc AVX512 register.
-%%   However, no matter which Block size is chosen, HalftimeHash is faster than the two CLMUL-based hash families.
-%% }
-
-% gnuplot> set terminal postscript eps enhanced color size 5,4 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"; set output 'speed-v-epsilon.eps'; set xlabel 'nanos per byte'; set ylabel 'collision probability'; set title "Speed vs. collision (lower left is better)"; unset key; set logscale y; unset logscale x; set grid; set yrange[1e-40:1e-10]; set xrange[0.0:0.08]; unset offsets; set xrange[0.0:0.08]; plot 'points-example.txt' using 1:2:3 with labels point pt 7 offset char 0,1
-
-
-% gnuplot> unset label; set label "63.99 bits" at 2,2.51 left font "LinLibertineO,30"; set xtics ("KB" 1000, "MB" 1e6, "GB" 1e9, "TB" 1e12, "PB" 1e15, "EB" 1e18); set terminal postscript eps enhanced color size 5,7 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"; set output 'entropy-bpb.eps'; set key top right; set xlabel 'input length in bytes'; set ylabel 'output entropy bits per byte of output'; set title 'Bits of entropy per output byte'; set grid; set logscale x; unset logscale y; set yrange [*:3]; set xrange[1.0:10e17]; plot -log(2**-128 + 2**-116 + (2**-128)*(floor(log((x < 256 ? 256 : x)/256)/log(8))**4))/log(2)/40 lw 8 title 'HalftimeHash40', -log(2**-96 + 2**-90 + (2**-96)*( floor(log((x < 192 ? 192 : x)/192)/log(8))**3))/log(2)/32 lw 8 title 'HalftimeHash32', -log(2**-64 + 2**-60 + (2**-64)*(floor(log((x < 128 ? 128 : x)/128)/log(8))**2))/log(2)/24 lw 8 title 'HalftimeHash24'
-
-
-In addition to the version of HalftimeHash that produces 192-bits of output, we have also implemented ones that produce 128 and 256 bits of output.
-
-TODO: explain block size differences better
-
-% TODO: do this on EC2 and in separate runs for each family
-%TODO: do a ratio test and do it over the whole range
-%\begin{figure}
-%   \includegraphics[width=8cm]{benchmark-output/i7-7800x-large.eps}
-%  \captionof{figure}{i7-7800x for large files. HalftimeHash's advantage shrinks as the string to be hashed no longer fits in L3 cache.}
-%\end{figure}
-
-For each machine configuration, we show the graph of the best performing compiler for each hash family, as defined by the throughput on input strings of length 250KB.
-
-%% \begin{figure}
-%%   \includegraphics[width=8cm]{benchmark-output/local-small.eps}
-%%   \caption{HalftimeHash is designed for string longer than 1KiB.
-%%     Here we see its performance on stirngs up to 10KB in size.
-%%     Below 1KiB, CLHASH and UMASH dominate.
-%%     A more general purpose using HalftimeHash would replace it with a different hash function, piecewise, on short strings.
-%%     This is already in-line with existing hash functions.
-%%     For instance, CLHASH uses straight NH, without polynomial hashing, for strings under 1KiB in size.
-%%   }
-%% \end{figure}
-
-
-%% \begin{figure*}
-%%    \includegraphics[width=16cm]{benchmark-output/m5zn-small.eps}
-%%   \caption{EC2 node for small files. HalftimeHash performs poorly.}
-%% \end{figure*}
-
-
-% gnuplot> set terminal postscript eps enhanced color size 4,4 fontfile "/usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb" "SFBX1200,20"; set output 'i7-7800x-large.eps'; set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; set title 'i7-7800x'; set key top right; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[0:*]; set xrange[*:10010000]; plot 'past-all-l3.txt' using 1:(1.0/ column(4)) with lines lw 5 title 'Halftime128', '' using 1:(1.0/ column(3)) with lines lw 5 title 'Halftime192', '' using 1:(1.0/ column(2)) with lines lw 5 title 'Halftime256', '' using 1:(1.0/ column(6)) with lines lw 5 title 'CLHASH', '' using 1:(1.0/ column(5)) with lines lw 7 title 'UMASH',
-
-
-% gnuplot> set terminal postscript eps enhanced color size 6,6 fontfile "/usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb" "SFBX1200,20"; set output 'i7-7800x-large.eps'; set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; set title 'i7-7800x'; set key top right; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[0:*]; set xrange[*:*]; plot 'past-all-l3.txt' using 1:(1.0/ column(4)) title 'Halftime128', '' using 1:(1.0/ column(3)) title 'Halftime192', '' using 1:(1.0/ column(2)) title 'Halftime256', '' using 1:(1.0/ column(6)) title 'CLHASH', '' using 1:(1.0/ column(5))   title 'UMASH',
-
-
-% gnuplot> set terminal postscript eps enhanced color size 6,3.67 fontfile "/usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb" "SFBX1200,20"; set output 'm5zn-small.eps'; set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; set title 'm5zn.l'; set key top left; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[*:*]; set xrange[1:1000]; plot 'm5zn.large-gcc-10-4049690-256.txt' using 1:(1.0/ column(2)) title 'Halftime128', 'm5zn.large-gcc-10-4049690-16.txt' using 1:(1.0/ column(2)) title 'Halftime192', 'm5zn.large-gcc-10-4049690-1.txt' using 1:(1.0/ column(2)) title 'Halftime256', 'm5zn.large-gcc-10-4049690-8192.txt' using 1:(1.0/ column(2)) title 'CLHASH', 'm5zn.large-clang-11-4049690-4096.txt' using 1:(1.0/ column(2))   title 'UMASH',
-
-
-%% \begin{figure}
-%%   \includegraphics[width=8cm]{benchmark-output/m5zn-medium.eps}
-%%   \caption{HalftimeHash is designed for string longer than 1KiB.
-%%     Here we see its performance on stirngs up to 10KB in size.
-%%     Below 1KiB, CLHASH and UMASH dominate.
-%%     A more general purpose using HalftimeHash would replace it with a different hash function, piecewise, on short strings.
-%%     This is already in-line with existing hash functions.
-%%     For instance, CLHASH uses straight NH, without polynomial hashing, for strings under 1KiB in size.
-%%   }
-%% \end{figure}
-
-% gnuplot> set terminal postscript eps enhanced color size 3.67,6 fontfile "/usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb" "SFBX1200,20"; set output 'm5zn-small.eps'; set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; set title 'm5zn.l'; set key top left; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[*:*]; set xrange[1:1000]; plot 'm5zn.large-gcc-10-4049690-256.txt' using 1:(1.0/ column(2)) title 'Halftime128', 'm5zn.large-gcc-10-4049690-16.txt' using 1:(1.0/ column(2)) title 'Halftime192', 'm5zn.large-gcc-10-4049690-1.txt' using 1:(1.0/ column(2)) title 'Halftime256', 'm5zn.large-gcc-10-4049690-8192.txt' using 1:(1.0/ column(2)) title 'CLHASH', 'm5zn.large-clang-11-4049690-4096.txt' using 1:(1.0/ column(2))   title 'UMASH',
-
-
-%gnuplot> set terminal postscript eps enhanced color size 3.67,5 fontfile "/usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb" "SFBX1200,20"; set output 'm5zn-medium.eps'; set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; unset title; set key top left; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[20:100]; set xrange[1000:*]; plot 'm5zn.large-gcc-10-4049690-256.txt' using 1:(1.0/ column(2)) title 'HalftimeHash24', 'm5zn.large-gcc-10-4049690-16.txt' using 1:(1.0/ column(2)) title 'HalftimeHash32', 'm5zn.large-gcc-10-4049690-1.txt' using 1:(1.0/ column(2)) title 'HalftimeHash40', 'm5zn.large-gcc-10-4049690-8192.txt' using 1:(1.0/ column(2)) title 'CLHASH', 'm5zn.large-clang-11-4049690-4096.txt' using 1:(1.0/ column(2)) title 'UMASH',
-
-% gnuplot> set terminal postscript eps enhanced color size 3.67,6 fontfile "/usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb" "SFBX1200,20"; set output 'm5zn-medium.eps'; set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; set title 'm5zn.l'; set key top left; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[20:100]; set xrange[1000:*]; plot 'm5zn.large-gcc-10-4049690-256.txt' using 1:(1.0/ column(2)) title 'Halftime128', 'm5zn.large-gcc-10-4049690-16.txt' using 1:(1.0/ column(2)) title 'Halftime192', 'm5zn.large-gcc-10-4049690-1.txt' using 1:(1.0/ column(2)) title 'Halftime256', 'm5zn.large-gcc-10-4049690-8192.txt' using 1:(1.0/ column(2)) title 'CLHASH', 'm5zn.large-clang-11-4049690-4096.txt' using 1:(1.0/ column(2))   title 'UMASH',
-
-
-% gnuplot> set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; set title 'm5zn.l'; set term wxt background rgb "#ffffff"; set key top left; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[20:100]; set xrange[1000:*]; plot 'm5zn.large-gcc-10-4049690-256.txt' using 1:(1.0/ column(2)) title 'Halftime128', 'm5zn.large-gcc-10-4049690-16.txt' using 1:(1.0/ column(2)) title 'Halftime192', 'm5zn.large-gcc-10-4049690-1.txt' using 1:(1.0/ column(2)) title 'Halftime256', 'm5zn.large-gcc-10-4049690-8192.txt' using 1:(1.0/ column(2)) title 'CLHASH', 'm5zn.large-clang-11-4049690-4096.txt' using 1:(1.0/ column(2))   title 'UMASH',
-
-
-% gnuplot> set term wxt background rgb "#ffffff"; set key top left; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[0.1:100]; set xrange[1000:*]; plot 'm5zn.large-gcc-10-4049690-256.txt' using 1:(1.0/ column(2)) with lines lw 2, 'm5zn.large-gcc-10-4049690-16.txt' using 1:(1.0/ column(2)) with lines lw 2, 'm5zn.large-gcc-10-4049690-1.txt' using 1:(1.0/ column(2)) with lines lw 2, 'm5zn.large-gcc-10-4049690-8192.txt' using 1:(1.0/ column(2)) with lines lw 2, 'm5zn.large-clang-11-4049690-4096.txt' using 1:(1.0/ column(2)) with lines lw 2,
-
-% gnuplot> set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; set title 'm5zn.l'; set term wxt background rgb "#ffffff"; set key top left; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[20:100]; set xrange[1000:*]; plot 'm5zn.large-gcc-10-4049690-256.txt' using 1:(1.0/ column(2)) with lines lw 2 title 'Halftime128', 'm5zn.large-gcc-10-4049690-16.txt' using 1:(1.0/ column(2)) with lines lw 2 title 'Halftime192', 'm5zn.large-gcc-10-4049690-1.txt' using 1:(1.0/ column(2)) with lines lw 2 title 'Halftime256', 'm5zn.large-gcc-10-4049690-8192.txt' using 1:(1.0/ column(2)) with lines lw 2 title 'CLHASH', 'm5zn.large-clang-11-4049690-4096.txt' using 1:(1.0/ column(2)) with lines lt rgb '#3434ff' lw 2 title 'UMASH',
-
-
-
-%% \includegraphics{benchmark-output/vs_clhash.eps}
-
-%% \includegraphics{benchmark-output/systematic/c5a-l.eps}
-
-%% \includegraphics{benchmark-output/systematic/inf1-xl.eps}
-
-%% \includegraphics{benchmark-output/systematic/m5a-l.eps}
-
-%% \includegraphics{benchmark-output/systematic/t3-m.eps}
-
-%% \includegraphics{benchmark-output/systematic/z1d-l.eps}
-
-%% \begin{verbatim}
-%% set terminal postscript eps enhanced color size 6.5,3.67 fontfile "/usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb" "SFBX1200,20"; set output 'vs_clhash.eps'; set title'i7-7800x';
-%% set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[*:85]; set xrange[*:*];
-%% plot './clhash-0.1-percent-still-100-for-paper.txt'using 1: (1.0/ column(2)) with lines, './halftime-line-badger-0.1-percent-still-100.txt'using 1: (1.0/ column(2)) with lines,
-
-%% set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[*:45]; set xrange[*:*]; plot for [i=2:7] './c5a.l.clang.txt' using 1: (1.0/ column(i)) with lines, for [i=2:7] './c5a.l.gcc.txt' using 1: (1.0/ column(i)) with lines,
-
-%% set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[*:45]; set xrange[*:*]; plot './c5a.l.clang.txt' using 1: (1.0/ column(3)) with lines, '' using 1: (1.0/ column(7)) with lines,
-
-%% set terminal postscript eps enhanced color size 6.0,3.67 fontfile "/usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb" "SFBX1200,20"; set output 'c5a-l.eps'; set title 'c5a-l'; set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[*:85]; set xrange[*:*]; plot './c5a.l.clang.txt' using 1: (1.0/ column(7)) with lines, '' using 1: (1.0/ column(3)) with lines,
-
-%% set terminal postscript eps enhanced color size 6.0,3.67 fontfile "/usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb" "SFBX1200,20"; set output 'inf1-xl.eps'; set title 'inf1-xl'; 
-%% set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[*:75]; set xrange[*:*]; 
-%% plot for [i=7:7] './inf1.xl.gcc.txt' using 1: (1.0/ column(i)) with lines, for [i=3:3] './inf1.xl.clang.txt' using 1: (1.0/ column(i)) with lines
-
-%% gnuplot> set terminal postscript eps enhanced color size 6.0,3.67 fontfile "/usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb" "SFBX1200,20"; set output 'm5a-l.eps'; set title 'm5a-l'; set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[*:75]; set xrange[*:*]; plot for [i=7:7] './m5a.l.gcc.txt' using 1: (1.0/ column(i)) with lines, for [i=5:5] './m5a.l.clang.txt' using 1: (1.0/ column(i)) with lines
-
-%% gnuplot> set terminal postscript eps enhanced color size 6.0,3.67 fontfile "/usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb" "SFBX1200,20"; set output 't3-m.eps'; set title 't3-m'; set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[*:75]; set xrange[*:*]; plot for [i=7:7] './t3.m.gcc.txt' using 1: (1.0/ column(i)) with lines, for [i=2:2] './t3.m.clang.txt' using 1: (1.0/ column(i)) with lines
-
-%% gnuplot> set term wxt background rgb "#bacada"; set style fill transparent solid 0.01 noborder; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[0:85]; set xrange[1000:*]; plot  './t3.m.clang.txt' using 1:(1.0/ column(2)):(0.2 * column(1)) with lines lw 5 lt rgb "white", './t3.m.gcc.txt' using 1:(1.0/ column(7)):(0.2 * column(1)) with lines lw 1 lt rgb "#880000"
-
-%% gnuplot> set term wxt background rgb "#ffffff"; set style fill transparent solid 0.01 noborder; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[0:85]; set xrange[1000:*]; plot  './t3.m.clang.txt' using 1:(1.0/ column(2)):(0.2 * column(1)) with lines lw 2 lt rgb "#ca0020", './t3.m.gcc.txt' using 1:(1.0/ column(7)):(0.2 * column(1)) with lines lw 2 lt rgb "#2020ca"
-
-%% gnuplot> set style fill transparent solid 0.1 noborder; set term wxt background rgb "#ffffff"; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[0:85]; set xrange[1000:1000000]; plot './t3.m.clang.txt' using 1:(1.0/ column(2)):(500 * log(column(1))):(1) with ellipses, './t3.m.gcc.txt' using 1:(1.0/ column(7)):(500 * log(column(1))):(1) with ellipses
-
-%% gnuplot> set style fill transparent solid 1 noborder; set term wxt background rgb "#ffffff"; set key autotitle columnheader; unset logscale y; set logscale x; set grid; set yrange[0:85]; set xrange[1:*]; plot '/tmp/precise-gcc-all.txt' using 1:(1.0/ column(2)) with lines lw 6 lt rgb '#3434ff', '' using 1:(1.0/column(3)):(0.05 * column(1)) with circles lt rgb '#000000', '' using 1:(1.0/column(4)) with lines lw 2 lt rgb '#ff3434'
-
-%% gnuplot> set terminal postscript eps enhanced color size 6.0,3.67 fontfile "/usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb" "SFBX1200,20"; set output 'local-small.eps'; set title 'local-small'; set xlabel 'input length in bytes'; set ylabel 'billion bytes per second'; set key autotitle columnheader; unset logscale y; set logscale x; set grid;  set key top left; set yrange[*:*]; set xrange[*:*]; plot for [i in "2 6 10 14 15"] 'gcc10-4049690-all.txt' using 1:(1.0/ column(0+i)) title columnhead(i) lw 1
-
-%% \end{verbatim}
-
-TODO: CAVP @ NIST
-
-TODO: crypto community tests, eBASH
+%% TODO: crypto community tests, eBASH
 
 \section{Future work}
 
-HalftimeHash is a fast family for strings that are more than 1KB but still fit in cache.
-The introduction pondered combining HalftimeHash with hash families designed for shorter strings.
-This remains future work.
+HalftimeHash is a fast family for strings that are more than 1KB in size.
+Above was pondered combining HalftimeHash with hash families designed for shorter strings.
+The details remain future work.
 
 Additionally, HalftimeHash depends on platforms supporting multiplication of two 32-bit integers that produces a 64-bit integer.
 This operation is present in many environments, but not all.
-Notable exceptions include some embedded platforms and native JavaScript, which only support 53-bit integers.
+Notable exceptions include some embedded platforms that do not support widening multiplication of two 32-bit integers and native JavaScript, which only supports 53-bit integers.
 
-TODO: longer outputs to match clhash or poly1305
+More detailed comparisons against hash algorithms written for speed and executed in the Linux kernel, including Poly1305 and \texttt{crc32\_pclmul\_le\_16} could also be a fruitful directon for future work.
 
-TODO: compare against optimized poly1305 from kernel
+%TODO: multi-threading
 
-TODO: test crc crc32\_pclmul\_le\_16 and see if that can go more than twice as fast as HalftimeHash, including making it work on unaligned data
+%TODO: reducing seed size
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{library}

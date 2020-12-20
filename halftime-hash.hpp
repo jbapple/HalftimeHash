@@ -677,11 +677,6 @@ inline void Combine2(const Block input[12], Block output[2]) {
   Badger::template Dot2<1, 5>(output, input[1]);
 }
 
-// evenness: 3 weight: 24
-//  1   0   0   0   1   1  17   2   4 -17
-//  0   1   0   0   1   2   4   1   3   4
-//  0   0   1   0   1   3   9   8   1   8
-//  0   0   0   1   1   4 -10   4  10   3
 //
 // evenness: 4 weight: 16
 //   8   8   0   2   1   8   2   1   2   4
@@ -718,7 +713,22 @@ inline void Combine2(const Block input[12], Block output[2]) {
 //   3   1   9   0   2   0   1   2   1   0
 //   0   0   7   5   2   0   1   3   9   4
 //   0   1   0   4   7   7   1   7   7   0
-
+//
+// rearranged:
+//  0 0 0 3 9 7 9 1 8 7
+//  0 1 2 3 0 9 0 2 1 1
+//  0 0 3 0 4 7 5 2 1 9
+//  7 1 7 0 0 0 4 7 1 7
+//
+// shifts: 16
+// adds: 7
+// negations: 2
+// evenness: 3 weight: 24
+//  1   0   0   0   1   1  17   2   4 -17
+//  0   1   0   0   1   2   4   1   3   4
+//  0   0   1   0   1   3   9   8   1   8
+//  0   0   0   1   1   4 -10   4  10   3
+//
 template <typename Badger, typename Block>
 inline void Combine4(const Block input[10], Block output[4]) {
   output[0] = input[0];
@@ -946,14 +956,14 @@ template <void (*Hasher)(const uint64_t* entropy, const char* char_input,
           int width>
 inline uint64_t TabulateAfter(const uint64_t* entropy, const char* char_input,
                               size_t length) {
-  const uint64_t(&table)[width][256] =
-      *reinterpret_cast<const uint64_t(*)[width][256]>(entropy);
+  const uint64_t(&table)[1 + width][256] =
+      *reinterpret_cast<const uint64_t(*)[1 + width][256]>(entropy);
   entropy += width * 256;
   uint64_t output[width];
   Hasher(entropy, char_input, length, output);
   uint64_t result = TabulateBytes<sizeof(length)>(length, &table[0][0]);
   for (int i = 0; i < width; ++i) {
-    result ^= TabulateBytes<sizeof(output[i])>(output[i], &table[8 * i][0]);
+    result ^= TabulateBytes<sizeof(output[i])>(output[i], &table[8 * (i + 1)][0]);
   }
   return result;
 }

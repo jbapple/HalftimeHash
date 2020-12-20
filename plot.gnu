@@ -47,24 +47,24 @@ set yrange[*:65]
 set xrange[*:*]
 plot for [i=3:3] './c5a.large-clang-11-8c4af1f.txt' using 1:i with lines,  for [i=7:7] './c5a.large-clang-11-8c4af1f.txt' using 1:i pt 6
 
-set terminal postscript eps enhanced color size 5,7 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
-set title "Input size vs. GB/s (higher is better)"
-unset offsets
-set xlabel 'input length in bytes'
-set ylabel 'billion bytes per second'
-set key top left
-set key autotitle columnheader
-unset logscale y
-set logscale x
-unset format y
-set format x '10^{%L}'
-set grid
-set output 'line-cl-hh24.eps'
-set yrange[*:90]
-set xrange[*:*]
-plot './umash-001.txt' using 1:2 pt 6, '' using 1:3 with lines lw 10, '' using 1:4 with lines
+# set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
+# set title "Input size vs. GB/s (higher is better)"
+# unset offsets
+# set xlabel 'input length in bytes'
+# set ylabel 'billion bytes per second'
+# set key top left
+# set key autotitle columnheader
+# unset logscale y
+# set logscale x
+# unset format y
+# set format x '10^{%L}'
+# set grid
+# set output 'line-cl-hh24.eps'
+# set yrange[*:90]
+# set xrange[*:*]
+# plot './umash-001.txt' using 1:2 pt 6, '' using 1:3 with lines lw 10, '' using 1:4 with lines
 
-set terminal postscript eps enhanced color size 5,7 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
+set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
 unset title
 unset offsets
 unset xlabel
@@ -81,11 +81,11 @@ set yrange[*:90]
 set xrange[*:*]
 plot './umash-001.txt' using 1:2 pt 6, '' using 1:3 with lines lw 10, '' using 1:4 with lines
 
-set terminal postscript eps enhanced color size 5,7 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
+set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
 unset title
 unset offsets
 unset xlabel
-set ylabel 'billion bytes per second'
+unset ylabel
 set key top left
 set key autotitle columnheader
 unset logscale y
