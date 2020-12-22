@@ -1,4 +1,5 @@
 #include <immintrin.h>
+#include <cassert>
 #include <climits>
 #include <cstdint>
 #include <cstring>
@@ -8,19 +9,6 @@
 #define inline inline
 
 namespace halftime_hash {
-
-template <unsigned out_width>
-inline void V4(const uint64_t* entropy, const char* char_input, size_t length,
-               uint64_t output[out_width]);
-template <unsigned out_width>
-inline void V3(const uint64_t* entropy, const char* char_input, size_t length,
-               uint64_t output[out_width]);
-template <unsigned out_width>
-inline void V2(const uint64_t* entropy, const char* char_input, size_t length,
-               uint64_t output[out_width]);
-template <unsigned out_width>
-inline void V1(const uint64_t* entropy, const char* char_input, size_t length,
-               uint64_t output[out_width]);
 
 namespace {
 
@@ -325,6 +313,82 @@ constexpr inline int CeilingLog2(size_t n) {
   return (n <= 1) ? 0 : 1 + CeilingLog2(n / 2 + n % 2);
 }
 
+// void HashAndCombine(const u512 input[3], const uint64_t extra[3],
+//                     const uint64_t entropy[2][9], uint64_t output[3]) {
+//   auto a = Plus32(input[0], BlockWrapper512::LoadBlock(entropy[0]));
+//   a = Times(a, RightShift(a, 32));
+//   auto b = Plus32(input[1], BlockWrapper512::LoadBlock(entropy[1]));
+//   b = Times(b, RightShift(b, 32));
+//   auto c = Plus(a, b);
+//   c = Plus(c, input[2]);
+//   // TODO: masking to prevent UB
+//   auto d = _mm512_sllv_epi64(c, u512{64, 0,  2,  0,  0, 1, 1, 0});
+//   auto e = _mm512_sllv_epi64(c, u512{0,  64, 64, 0,  2, 0, 1, 1});
+//   auto f = _mm512_sllv_epi64(c, u512{2,  0,  0, 64, 64, 1, 0, 1});
+//   output[0] = Sum(d);
+//   output[1] = Sum(e);
+//   output[2] = Sum(f);
+//   {
+//     auto a = Plus32(extra[0], entropy[0][8]);
+//     a = (a & 0xffffffff) * (a >> 32);
+//     auto b = Plus32(extra[1], entropy[1][8]);
+//     a = (b & 0xffffffff) * (b >> 32);
+//     auto c = a + b + extra[2];
+//     output[1] += c;
+//     output[2] += c;
+//   }
+// }
+
+// static void EhcBaseLayerTiny(const char input[3][7][sizeof(uint64_t)],
+//                              const uint64_t entropy[2][9], uint64_t (&output)[3]) {
+//   // auto tmp = BlockWrapper::LoadBlock(&input[0]);
+//   // for (unsigned i = 0; i < out_width; ++i) output[i] = tmp;
+//   u512 encoded[3] = {BlockWrapper512::LoadBlock(input[0][0]),
+//                      BlockWrapper512::LoadBlock(input[1][0]),
+//                      BlockWrapper512::LoadBlock(input[1][8])};
+//   encoded[2] = _mm512_bsrli_epi128(encoded[2], 8);
+//   for (int j = 0; j < 3; ++j) {
+//     encoded[j][7] = encoded[j][0];
+//     for (int i = 1; i < 8; ++i) {
+//       encoded[j][7] ^= encoded[j][i];
+//     }
+//   }
+
+//   uint64_t extra[3] = {static_cast<uint64_t>(encoded[0][0]),
+//                        static_cast<uint64_t>(encoded[1][0]),
+//                        static_cast<uint64_t>(encoded[2][0])};
+
+//   int iter = 1;
+
+//   static const constexpr unsigned x = 0, y = 1, z = 2;
+
+//   auto DistributeRaw = [encoded, &extra, iter](unsigned label,
+//                                                std::initializer_list<unsigned> rest) {
+//     for (unsigned i : rest) {
+//       extra[i] ^= encoded[label][iter];
+//     }
+//   };
+
+//   auto Distribute3 = [&iter, DistributeRaw](std::initializer_list<unsigned> a,
+//                                             std::initializer_list<unsigned> b,
+//                                             std::initializer_list<unsigned> c) {
+//     DistributeRaw(x, a);
+//     DistributeRaw(y, b);
+//     DistributeRaw(z, c);
+//     iter += 1;
+//   };
+
+//   Distribute3({z}, {x, z}, {y});
+//   Distribute3({x, z}, {x, y, z}, {y, z});
+//   Distribute3({y}, {y, z}, {x, z});
+//   Distribute3({x, y}, {z}, {x});
+//   Distribute3({y, z}, {x, y}, {x, y, z});
+//   Distribute3({x, y, z}, {x}, {x, y});
+
+//   HashAndCombine(encoded, extra, entropy, output);
+// }
+
+
 template <typename BlockWrapper, unsigned dimension, unsigned in_width,
           unsigned encoded_dimension, unsigned out_width, unsigned fanout = 8>
 struct EhcBadger {
@@ -368,14 +432,8 @@ struct EhcBadger {
   static Block SimpleTimes(std::integral_constant<int, -10>, Block x) {
     return Negate(Plus(LeftShift(x, 3), LeftShift(x, 2)));
   }
-  static Block SimpleTimes(std::integral_constant<int, -2>, Block x) {
-    return Negate(LeftShift(x, 1));
-  }
   static Block SimpleTimes(std::integral_constant<int, -1>, Block x) {
     return Negate(x);
-  }
-  static Block SimpleTimes(std::integral_constant<int, 0>, Block) {
-    return BlockWrapper::LoadOne(0);
   }
   static Block SimpleTimes(std::integral_constant<int, 1>, Block x) { return x; }
   static Block SimpleTimes(std::integral_constant<int, 2>, Block x) {
@@ -404,12 +462,6 @@ struct EhcBadger {
   }
   static Block SimpleTimes(std::integral_constant<int, 17>, Block x) {
     return Plus(LeftShift(x, 4), x);
-  }
-  static Block SimpleTimes(std::integral_constant<int, 18>, Block x) {
-    return Plus(LeftShift(x, 4), LeftShift(x, 1));
-  }
-  static Block SimpleTimes(std::integral_constant<int, 20>, Block x) {
-    return Plus(LeftShift(x, 4), LeftShift(x, 2));
   }
 
   template <int a>
@@ -579,7 +631,7 @@ struct EhcBadger {
       b.Insert(BlockWrapper::LoadBlock(&char_input[i]));
     }
 
-    if (0) {
+    if (1) {
       Block extra = {};
       memcpy(&extra, &char_input[i], char_length - i);
       b.Insert(extra);
@@ -598,6 +650,43 @@ struct EhcBadger {
     b.Hash(output);
   }
 };  // EhcBadger
+
+// static inline void FlatHash(const char* data, size_t block_group_length,
+//                             const uint64_t* entropy, uint64_t output[3]) {
+//   entropy += 9 * 2;
+//   EhcBadger<BlockWrapperScalar, 7, 3, 9, 3>::BlockGreedy greed(entropy);
+//   for (size_t k = 0; k < block_group_length; ++k) {
+//     uint64_t base_out[3];
+//     EhcBaseLayerTiny(reinterpret_cast<const char(*)[7][8]>(reinterpret_cast<const void*>(
+//                          &data[k * 3 * 7 * sizeof(uint64_t)])),
+//                      reinterpret_cast<const uint64_t(*)[9]>(
+//                          reinterpret_cast<const void*>(&entropy[0])),
+//                      base_out);
+//     greed.Insert(base_out);
+//   }
+//   greed.Hash(output);
+// }
+
+// static inline void FlatFinalizer(const uint64_t (&flat_output)[3], const char* char_input,
+//                                  size_t char_length, const uint64_t* entropy,
+//                                  uint64_t output[3]) {
+//   EhcBadger<BlockWrapperScalar, 7, 3, 9, 3>::BlockGreedy b(entropy);
+
+//   b.Insert(flat_output);
+
+//   size_t i = 0;
+//   assert (char_length < 7 * 3 * sizeof(uint64_t));
+//   for (; i + sizeof(uint64_t) <= char_length; i += sizeof(uint64_t)) {
+//     b.Insert(BlockWrapperScalar::LoadBlock(&char_input[i]));
+//   }
+
+//   if (1) {
+//     uint64_t extra = 0;
+//     memcpy(&extra, &char_input[i], char_length - i);
+//     b.Insert(extra);
+//   }
+//   b.Hash(output);
+// }
 
 // %  1   0   0   1   1   1  17   1   4
 // %  0   1   0  -2  18   4  -1   1   1
@@ -756,7 +845,7 @@ inline void Combine4(const Block input[10], Block output[4]) {
 // 0   0   0   0   1   1   5   3   9
 
 template <typename Badger, typename Block>
-inline void Combine5(const Block input[10], Block output[4]) {
+inline void Combine5(const Block input[10], Block output[5]) {
   output[0] = input[0];
   output[1] = input[1];
   output[2] = input[2];
@@ -790,6 +879,18 @@ template <typename BlockWrapper, unsigned dimension, unsigned in_width,
           unsigned encoded_dimension, unsigned out_width>
 void Hash(const uint64_t* entropy, const char* char_input, size_t length,
           uint64_t output[out_width]) {
+  // if (false && length < 2048) {
+  //   size_t wide_length = length / sizeof(uint64_t) / (dimension * in_width);
+
+  //   uint64_t out[3];
+  //   FlatHash(char_input, wide_length, entropy, out);
+  //   entropy += 121;
+  //   auto used_chars = wide_length * sizeof(uint64_t) * (dimension * in_width);
+  //   char_input += used_chars;
+
+  //   FlatFinalizer(out, char_input, length - used_chars, entropy, output);
+  //   return;
+  // }
   constexpr unsigned kMaxStackSize = 9;
   constexpr unsigned kFanout = 8;
 
@@ -805,18 +906,17 @@ void Hash(const uint64_t* entropy, const char* char_input, size_t length,
   // const uint64_t* tabulation = entropy;
   // entropy += 256 * 8 * 4;
 
-  EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension,
-            out_width>::DfsTreeHash(char_input, wide_length, stack, stack_lengths,
-                                    entropy);
+  EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension, out_width,
+            kFanout>::DfsTreeHash(char_input, wide_length, stack, stack_lengths, entropy);
   entropy +=
       encoded_dimension * in_width + out_width * (kFanout - 1) * kMaxStackSize;
 
   auto used_chars = wide_length * sizeof(Block) * (dimension * in_width);
   char_input += used_chars;
 
-  EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension,
-            out_width>::DfsGreedyFinalizer(stack, stack_lengths, char_input,
-                                           length - used_chars, entropy, output);
+  EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension, out_width,
+            kFanout>::DfsGreedyFinalizer(stack, stack_lengths, char_input,
+                                         length - used_chars, entropy, output);
 }
 
 template <typename Block, unsigned count>
@@ -1067,6 +1167,19 @@ inline constexpr size_t GetEntropyBytesNeeded(size_t n) {
                           : EhcBadger<BlockWrapperScalar, 11, 2, 12,
                                       out_width>::GetEntropyBytesNeeded(n);
 }
+
+template <unsigned out_width>
+inline void V4(const uint64_t* entropy, const char* char_input, size_t length,
+               uint64_t output[out_width]);
+template <unsigned out_width>
+inline void V3(const uint64_t* entropy, const char* char_input, size_t length,
+               uint64_t output[out_width]);
+template <unsigned out_width>
+inline void V2(const uint64_t* entropy, const char* char_input, size_t length,
+               uint64_t output[out_width]);
+template <unsigned out_width>
+inline void V1(const uint64_t* entropy, const char* char_input, size_t length,
+               uint64_t output[out_width]);
 
 #if __AVX512F__
 

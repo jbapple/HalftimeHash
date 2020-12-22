@@ -26,7 +26,7 @@ umash/umash.o: umash/umash.c Makefile
 %.exe: %.cpp $(shell find -name '*.hpp' ) umash/umash.o Makefile
 	$(CXX) $(RELEASE_FLAGS) -o $@ $< umash/umash.o
 
-amd-16.eps line-cl-hh24.eps speed-v-epsilon.eps amd-cl-hh24.eps gcc-local-hh4.eps&: plateau-008.txt points-example.txt plot.gnu Makefile
+amd-16.eps line-cl-hh24.eps speed-v-epsilon.eps amd-cl-hh24.eps gcc-local-hh4.eps &: plateau-008.txt points-example.txt plot.gnu Makefile
 	gnuplot plot.gnu
 
 clean: Makefile

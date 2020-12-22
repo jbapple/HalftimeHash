@@ -1,13 +1,13 @@
 \documentclass[sigconf, nonacm]{acmart}
 
-%% \documentclass[acmsmall, nonacm]{acmart}
+ %% \documentclass[acmsmall, nonacm]{acmart}
 
-%% \geometry{twoside=false,
-%%   includeheadfoot, head=13pt, foot=2pc,
-%%   paperwidth=6in, paperheight=8in,
-%%   top=58pt, bottom=44pt, inner=46pt, outer=46pt,
-%%   marginparwidth=2pc,heightrounded
-%% }%
+ %% \geometry{twoside=false,
+ %%   includeheadfoot, head=13pt, foot=2pc,
+ %%   paperwidth=11in, paperheight=8.5in,
+ %%   top=58pt, bottom=44pt, inner=46pt, outer=46pt,
+ %%   marginparwidth=2pc,heightrounded
+ %% }%
 
 
 %\usepackage[margin=1in]{geometry}
@@ -82,7 +82,7 @@
 \orcid{0000-0002-8685-9451}
 \email{jbapple@apache.org}
 
-\hypersetup{draft}
+%\hypersetup{draft}
 
 \begin{document}
 %\thispagestyle{fancyplain}
@@ -90,9 +90,9 @@
 
 \begin{abstract}
 HalftimeHash is a new algorithm for hashing long strings.
-The goals are low collisions (different inputs that produce identical output hash values), high throughput, and {\em longevity} -- HalftimeHash should be easy to implement correctly on new ISAs and easy to code in almost any programming language.
+The goals are a low collisions of (different inputs that produce identical output hash values), high performance, and portability -- HalftimeHash should be easy to implement correctly on new ISAs and easy to code in almost any programming language.
 
-Compared to the fastest algorithm on long strings, clhash, HalftimeHash decreases collision probability while also increasing throughput by over 100\%.
+Compared to the fastest universal hash functions on long strings, clhash and UMASH, HalftimeHash decreases collision probability while also increasing performance by over 100\%.
 \end{abstract}
 
 \maketitle
@@ -917,6 +917,11 @@ More detailed comparisons against hash algorithms written for speed and executed
 %TODO: multi-threading
 
 %TODO: reducing seed size
+
+\begin{acks}
+Thanks to Daniel Lemire and Paul Khuong for helpful discussions and writings.
+\end{acks}
+
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{library}
