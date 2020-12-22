@@ -87,13 +87,14 @@ uint64_t OldGenScalar() {
 uint64_t GenScalar() {
   static thread_local Rgen r;
   unsigned x = r();
-  if ((x % 40) < 12) return 0;
-  switch ((x >> 4) % 10) {
-    case 6:
-      return 0;
-    default:
-      return ((x >> 4) % 10);
-  }
+  return x % 10;
+  // //  if ((x % 40) < 12) return 0;
+  // switch ((x >> 4) % 10) {
+  //   case 6:
+  //     //return 0;
+  //   default:
+  //     return ((x >> 4) % 10);
+  // }
 }
 
 void PrintScalar(uint64_t x) {
@@ -141,6 +142,7 @@ struct HeightBased {
 
   static void GenMatrix(int length, uint64_t columns[][height]) {
     if (3 == height) return GenMatrix3(length, reinterpret_cast<uint64_t(*)[3]>(columns));
+    if (4 == height) return GenMatrix4(length, reinterpret_cast<uint64_t(*)[4]>(columns));
     if (4 == height) {
       for (int i = 0; i < length; ++i) {
         for (int j = 0; j < height; ++j) {
@@ -178,7 +180,7 @@ struct HeightBased {
   //  1   1   0   0   1   4   1   2   2
   //  1   4   1   1   0   0   2   1   2
 
-  static void GenMatrix3(int length, uint64_t columns[][3]) {
+  static void GenMatrix3(int, uint64_t columns[][3]) {
     columns[0][0] = columns[1][0] = 0;
     columns[2][1] = columns[3][1] = 0;
     columns[4][2] = columns[5][2] = 0;
@@ -207,6 +209,23 @@ struct HeightBased {
     // columns[7][2] = columns[8][1] = 2;
     // columns[8][2] = 3;
     // columns[7][0] = 2;
+  }
+
+  static void GenMatrix4(int, uint64_t columns[][4]) {
+    columns[0][0] = columns[1][0] = columns[2][0] = 0;
+    columns[0][1] = columns[3][1] = columns[4][1] = 0;
+    columns[1][2] = columns[3][2] = columns[5][2] = 0;
+    columns[2][3] = columns[4][3] = columns[5][3] = 0;
+
+    columns[3][0] = columns[4][0] = columns[5][0] = 1;
+    columns[1][1] = columns[2][1] = columns[5][1] = 1;
+    columns[0][2] = columns[2][2] = columns[4][2] = 1;
+    columns[0][3] = columns[1][3] = columns[3][3] = 1;
+
+    GenColumn(columns[6]);
+    GenColumn(columns[7]);
+    GenColumn(columns[8]);
+    GenColumn(columns[9]);
   }
 
   static int OldWeighMatrix(int length, uint64_t columns[][height]) {
@@ -421,21 +440,21 @@ void main_loop(){
   // 3 -> 12
   // 4, 119 -> 15
   //
-  static constexpr int kColumns = 9;
+  static constexpr int kColumns = 10;
   int target = 0;
   int weightTarget = 0;
-  uint64_t m[kColumns][5];
+  uint64_t m[kColumns][4];
   // GenMatrix(kColumns, m);
   // PrintMatrix(kColumns, m);
   // cout << WeighScalar(33) << endl << WeighScalar(-33) << endl;
   // cout << "MED: " << MostEvenDeterminant(kColumns, m) << endl;
-  using Foo = HeightBased<5>;
+  using Foo = HeightBased<4>;
   int best = 64 + 1;
   int bestWeight = kColumns * 4 * 77;
   vector<int> topWeights(best, bestWeight);
   while (best > target || bestWeight > weightTarget) {
     Foo::GenMatrix(kColumns, m);
-    auto here = MostEvenDeterminant5(kColumns, m);
+    auto here = MostEvenDeterminant4(kColumns, m);
     if (here == 64) continue;
     auto weight = Foo::WeighMatrix(kColumns, m);
     if (topWeights[here] <= weight) continue;

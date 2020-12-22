@@ -157,28 +157,29 @@ int main(int argc, char** argv) {
       reps = max(reps, 8.0);
       reps = min(1000.0 * 1000, reps);
       Duration hh_time[4] = {
-          // TimeMulti<WrapHash<halftime_hash::V4<2>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<halftime_hash::V4<3>>>(reps, entropy, data.data(), i),
+           TimeMulti<WrapHash<halftime_hash::V4<2>>>(reps, entropy, data.data(), i),
+           TimeMulti<WrapHash<halftime_hash::V4<3>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<halftime_hash::V4Avx512<7, 3, 9, 3>>>(reps, entropy,
           //                                                          data.data(), i),
           // TimeMulti<WrapHash<halftime_hash::V4Avx2<7, 3, 9, 3>>>(reps, entropy,
           //                                                        data.data(), i),
           // TimeMulti<WrapHash<halftime_hash::V4Sse2<7, 3, 9, 3>>>(reps, entropy,
           //                                                        data.data(), i),
-          // TimeMulti<WrapHash<halftime_hash::V4Scalar<7, 3, 9, 3>>>(reps, entropy,
+          //          TimeMulti<WrapHash<halftime_hash::V4Scalar<7, 3, 9, 3>>>(reps,
+          //          entropy,
           //                                                          data.data(), i),
-          // TimeMulti<WrapHash<halftime_hash::V4<4>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<halftime_hash::V4<5>>>(reps, entropy, data.data(), i),
+          TimeMulti<WrapHash<halftime_hash::V4<4>>>(reps, entropy, data.data(), i),
+          TimeMulti<WrapHash<halftime_hash::V4<5>>>(reps, entropy, data.data(), i),
 
           // TimeMulti<WrapHash<halftime_hash::V3<2>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<halftime_hash::V3<3>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<halftime_hash::V3<4>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<halftime_hash::V3<5>>>(reps, entropy, data.data(), i),
 
-          TimeMulti<WrapHash<halftime_hash::V2<2>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<halftime_hash::V2<3>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<halftime_hash::V2<4>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<halftime_hash::V2<5>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<halftime_hash::V2<2>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<halftime_hash::V2<3>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<halftime_hash::V2<4>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<halftime_hash::V2<5>>>(reps, entropy, data.data(), i),
 
           // TimeMulti<WrapHash<halftime_hash::V1<2>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<halftime_hash::V1<3>>>(reps, entropy, data.data(), i),
