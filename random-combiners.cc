@@ -87,6 +87,7 @@ uint64_t OldGenScalar() {
 uint64_t GenScalar() {
   static thread_local Rgen r;
   unsigned x = r();
+  //return 1 << (x % 4);
   return x % 10;
   // //  if ((x % 40) < 12) return 0;
   // switch ((x >> 4) % 10) {
@@ -217,10 +218,23 @@ struct HeightBased {
     columns[1][2] = columns[3][2] = columns[5][2] = 0;
     columns[2][3] = columns[4][3] = columns[5][3] = 0;
 
-    columns[3][0] = columns[4][0] = columns[5][0] = 1;
-    columns[1][1] = columns[2][1] = columns[5][1] = 1;
-    columns[0][2] = columns[2][2] = columns[4][2] = 1;
-    columns[0][3] = columns[1][3] = columns[3][3] = 1;
+    // columns[3][0] = columns[4][0] = columns[5][0] = 1;
+    // columns[1][1] = columns[2][1] = columns[5][1] = 1;
+    // columns[0][2] = columns[2][2] = columns[4][2] = 1;
+    // columns[0][3] = columns[1][3] = columns[3][3] = 1;
+
+    columns[3][0] = GenScalar();
+    columns[4][0] = GenScalar();
+    columns[5][0] = GenScalar();
+    columns[1][1] = GenScalar();
+    columns[2][1] = GenScalar();
+    columns[5][1] = GenScalar();
+    columns[0][2] = GenScalar();
+    columns[2][2] = GenScalar();
+    columns[4][2] = GenScalar();
+    columns[0][3] = GenScalar();
+    columns[1][3] = GenScalar();
+    columns[3][3] = GenScalar();
 
     GenColumn(columns[6]);
     GenColumn(columns[7]);

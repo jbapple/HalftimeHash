@@ -520,6 +520,7 @@ In addition to the data on the stack, there are some characters that have yet to
 HalftimeHash uses three NH hash applications to complete the operation.
 First, it feeds every hash value in the three stacks to the corresponding NH execution.
 Second, it feeds every character in the remainder of the input string into {\em all three} NH executions.
+For both, HalftimeHash uses the A$\Delta$U version of NH.
 
 HalftimeHash then returns the three NH sums, for a total of 24 bytes of output.
 This output is only AU, so users will likely want to rehash it (along with the input length) with a hash family with guarantees stronger than almost universality, such as tabulation hashing or SipHash. \cite{tabulation,siphash}
@@ -591,27 +592,27 @@ HalftimeHash has the following steps that will be analyzed in order:
 \item{} {\em [optional]} Finalize with tabulation hashing or SipHash
 \end{enumerate}
 
-A summary of the conclusions is in Table \ref{analysis-table}.
+%%A summary of the conclusions is in Table \ref{analysis-table}.
 
-\begin{table*}
-\begin{tabular}{|l|c|c|c|c|c|c|c|}
-  \hline {\bf Step} & {\bf Mults (each)} & {\bf In Entropy (each)} & {\bf Out Entropy (each)} & {\bf Height} & {\bf Number} & {\bf Out words total}\\
-  \hline (1) & $b e(w-1)$ & $e(w-1)$ & $k(32-p)$ & 1 & $\lfloor n/b d w \rfloor$ & $b k \lfloor n/b d w \rfloor$ \\
-  \hline (2) & $b (f-1)$ & $f-1$ & $32$ & $\left\lfloor\log_f\lfloor n/b d w \rfloor - 1\right\rfloor$ & $k \lfloor n / b d w \rfloor / f$ & $b f k \left\lfloor\log_f\lfloor n/d w b \rfloor\right\rfloor$ \\
-  \hline (3)(a) & $b f \left\lfloor\log_f\lfloor n/b d w \rfloor\right\rfloor$ & $b f \left\lfloor\log_f\lfloor n/b d w \rfloor\right\rfloor$ & $32$ & 1 & $k$ & $k$ \\
-  \hline (3)(b) & $b d k w$ &  $b d w + k - 1$ & $32$ & 1 & 1 & $k$ \\
-  \hline (4) & 0 &  $2^{11}k$ & $64$ & 1 & 1 & 1 \\
-  \hline
-\end{tabular}
-\caption{\label{analysis-table}
-  Statistics for number of multiplications, amount of input entropy (in 64-bit words), and output entropy (counted in bits) of each step in HalftimeHash.
-  Additionally, each step has a height and width listed.
-  Height is the longest dependency chain between executions of the primitive in the listed step.
-  Number is the total number of executions of that primitive in an execution of HalftimeHash.
-  The multiplications in total for a step is the product of the multiplications in each times the number of executions of that primitive.
-  The collision probability is the product of the height and the collision probability of each execution of the primitive.
-}
-\end{table*}
+%% \begin{table*}
+%% \begin{tabular}{|l|c|c|c|c|c|c|c|}
+%%   \hline {\bf Step} & {\bf Mults (each)} & {\bf In Entropy (each)} & {\bf Out Entropy (each)} & {\bf Height} & {\bf Number} & {\bf Out words total}\\
+%%   \hline (1) & $b e(w-1)$ & $e(w-1)$ & $k(32-p)$ & 1 & $\lfloor n/b d w \rfloor$ & $b k \lfloor n/b d w \rfloor$ \\
+%%   \hline (2) & $b (f-1)$ & $f-1$ & $32$ & $\left\lfloor\log_f\lfloor n/b d w \rfloor \right\rfloor$ & $k \lfloor n / b d w \rfloor / f$ & $b f k \left\lfloor\log_f\lfloor n/d w b \rfloor\right\rfloor$ \\
+%%   \hline (3)(a) & $b f \left\lfloor\log_f\lfloor n/b d w \rfloor\right\rfloor$ & $b f \left\lfloor\log_f\lfloor n/b d w \rfloor\right\rfloor$ & $32$ & 1 & $k$ & $k$ \\
+%%   \hline (3)(b) & $b d k w$ &  $b d w + k - 1$ & $32$ & 1 & 1 & $k$ \\
+%%   \hline (4) & 0 &  $2^{11}k$ & $64$ & 1 & 1 & 1 \\
+%%   \hline
+%% \end{tabular}
+%% \caption{\label{analysis-table}
+%%   Statistics for number of multiplications, amount of input entropy (in 64-bit words), and output entropy (counted in bits) of each step in HalftimeHash.
+%%   Additionally, each step has a height and width listed.
+%%   Height is the longest dependency chain between executions of the primitive in the listed step.
+%%   Number is the total number of executions of that primitive in an execution of HalftimeHash.
+%%   The multiplications in total for a step is the product of the multiplications in each times the number of executions of that primitive.
+%%   The collision probability is the product of the height and the collision probability of each execution of the primitive.
+%% }
+%% \end{table*}
 
 \subsection{EHC}
 
@@ -693,7 +694,9 @@ $\ints_{2^{64}}$ is not a finite field, but the structure of this proof that EHC
   \]
 \end{proof}
 
-So following Table \ref{analysis-table}, we have
+%%So following Table \ref{analysis-table}, we have
+
+For this step we have the following metrics:
 
 %% \begin{tabular}{|l|c|c|c|}
 %%   \hline {\bf Step} & {\bf Mults (each)} & {\bf In Entropy (each)} & {\bf Out Entropy (each)}\\
@@ -701,45 +704,65 @@ So following Table \ref{analysis-table}, we have
 %%   \hline
 %% \end{tabular}
 \begin{tabular}{|r|l|}
-    \hline {\bf Step} & {\bf EHC} \\
+    %% \hline {\bf Step} & {\bf EHC} \\
     \hline {\bf Mults (each)} & $b e (w-1)$ \\
-    \hline {\bf In Entropy (each)} & $e (w-1)$ \\
-    \hline {\bf Out Entropy (each)} & $k (32-p)$\\
+    \hline {\bf Mults (total)} & $b e (w-1) \lfloor n / b d w\rfloor$ \\
+    \hline {\bf In Entropy} & $e (w-1)$ \\
+    \hline {\bf Out Entropy} & $k (32-p)$\\
+    \hline {\bf Output words (total)} & $k b \lfloor n / b d w\rfloor $\\
     \hline
 \end{tabular}
 
 
 \subsection{Tree hash}
 
+For the tree hash portion of HalftimeHash, the height of the $k$ trees drives multiple metrics.
+Each tree has $\lfloor n / b d w \rfloor$ blocks as input and, when a block is written to level $i$ for the first time, is a complete $f$-ary tree.
+The height of the tree is thus $\left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor$.
+
 \begin{lemma}
-The tree hash portion of EHC produces $32k - k\lg\left\lfloor\log_f \lfloor n/d w\rfloor\right\rfloor$ bits of entropy.
+The tree hash portion of EHC produces $32k - k\lg\left\lfloor\log_f \lfloor n/b d w\rfloor\right\rfloor$ bits of entropy.
 \end{lemma}
 \begin{proof}
-Each of the $k$ hash trees is fed one word of input for every $d w$ words of input to EHC.
-Every instance of $f$ words in the tree hash at level 0 is hashed with NH to produce a new word at level 1.
-Inductively, if $m$ is the number of words fed into the tree hash, then $m \geq f^h$, where $h$ is the height of the tree.
-Similarly, $m < f^{h+1}$, so $h = \lfloor \log_f m \rfloor$.
-Combined with the classic result by Carter and Wegman of tree hashing's collision probability, the tree hash portion of HalftimeHash is AU with $\varepsilon = h 2^{-32}$.
-Since $m = \lfloor n / d w \rfloor$, where $n$ is the length of the input in 64-bit words, the resulting collision probability overall is $\left(\left\lfloor \log_f \lfloor n / d w \rfloor \right\rfloor 2^{-32}\right)^k$
+  Carter and Wegman showed that tree hash has collision probability of $h \varepsilon$, where $\varepsilon$ is the collision probability of a single node in the tree.
+  Each tree node uses NH, so a single tree has collision probability $\left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor 2^{-32}$.
+  A collision occurs for HalftimeHash at the tree hash stage if and only if each tree has a collision, which has probability $\left(\left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor 2^{-32}\right)^k$, assuming that the EHC step didn't already induce a collision.
 \end{proof}
 
-The amount of entropy needed is proportional to the height of the tree, $\left\lfloor\log_f \lfloor n/d w\rfloor\right\rfloor$, with $f$ words needed for every level.
-Here, HalftimeHash uses different seeds for the $k$ different trees to maintain independence of the entropy in the words of the output values, so the total number of 64-bit words of entropy used in the tree hash step is \[f k\left\lfloor\log_f \lfloor n/d w\rfloor\right\rfloor\]
+The proof from Carter and Wegman does not need the primitive to be A$\Delta$U.
+As a result, EHC doesn't need to be A$\Delta$U, which means that the NH variant used in it does not need to be A$\Delta$U.
 
-In the limit the number of multiplications performed is nearly identical to the number of input words.
+The amount of entropy needed is proportional to the height of the tree, with $f$ words needed for every level.
+Here, HalftimeHash uses different seeds for the $k$ different trees to maintain independence of the entropy in the words of the output values, so the total number of 64-bit words of entropy used in the tree hash step is $f k\left\lfloor\log_f \lfloor n/b d w\rfloor\right\rfloor$.
+
+Finally, the data in the stack is also proportional to the height and the number of trees.
+Specifically, there are up to $b f$ words in each stack level, and there are $k \left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor$ stack levels.
+
+In the limit, the number of multiplications performed is nearly identical to the number of input words.
 Of each $m$ words fed into the tree hash phase, $7/8$ths of them are multiplied by something in the first level.
-Since each level is identical (except for seeds), this continues, approaching 1 from below as the sum of a geometric series.
+Since each level is identical (except for seeds), this continues, approaching 1 from below as the sum of a geometric series, creating a total of $k b \lfloor n / b d w \rfloor$ multiplications.
+
+\begin{tabular}{|r|l|}
+%    \hline {\bf } & {\bf Tree hash} \\
+    \hline {\bf Mults (each node)} & $b (f-1)$ \\
+    \hline {\bf Mults (total)} & $k b \lfloor n / b d w \rfloor$ \\
+    \hline {\bf In Entropy (each tree $\times$ level)} & $f-1$ \\
+    \hline {\bf In Entropy (total)} & $k (f-1) \left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor$ \\
+    \hline {\bf Out Entropy (total)} & $32k - k\lg\left\lfloor\log_f \lfloor n/b d w\rfloor\right\rfloor$\\
+    \hline {\bf Output words (total)} & $b f k \left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor$\\
+    \hline
+\end{tabular}
+
 
 \subsection{Sweep}
 
-There can be as many as as $f b h$ words of data in each of the $k$ stacks used for tree hashing.
-For this data, HalftimeHash uses NH, which uses $f k b h$ words of entropy and just as many multiplications
+For the output words in the stack after tree hash, HalftimeHash uses NH, which uses $b f k \left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor$ words of entropy and just as many multiplications.
 
 There can also be as much as $b d w$ words of data in the raw input that are untouched so far by HalftimeHash.
 Again, NH is used, but now hashing $k$ times, since this data has not gone through EHC.
 That requires $b d w k$ words of entropy and just as many multiplications.
 
-For the untouched data, the number of words of entropy needed can be reduced by nearly a factor of $k$ using the Toeplitz construction. 
+For the untouched data, the number of words of entropy needed can be reduced by nearly a factor of $k$ using the Toeplitz construction.
 Let $r$ be the sequence of random words used in the leftover part of the sweep.
 Instead of using $[r_{i b d w}, r_{(i+1)b d w})$ as the keys to hash component $i$ with, HalftimeHash uses $[r_{i}, r_{bdw + i})$.
 Both Nandi and Woelfel present short proofs that this construction for multi-part hash output is A$\Delta$U. \cite{ehc-nandi,woelfel-toeplitz}
@@ -749,34 +772,25 @@ Both Nandi and Woelfel present short proofs that this construction for multi-par
 \subsection{Cumulative analysis}
 
 The combined collision probability is
-\[2^{k(p-32)} + \left\lfloor \log_f \lfloor n / d w \rfloor \right\rfloor^k 2^{-32k} + 2^{-32k}\]
-For the main example described above, with $k=3$, $p=2$, $f=8$, $d = 7$, and $w=3$, and for strings less than an exabyte in length, this is
-\[2^{3(2-32)} + \left\lfloor \log_8 \lfloor 10^{18} /(8 \cdot 21) \rfloor \right\rfloor^3 2^{-96} + 2^{-96}\]
-which is more than 83 bits of entropy.
+\[2^{k(p-32)} + \left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor^k 2^{-32k} + 2^{-32k}\]
+For the main example described above, with $k=3$, $p=2$, $f=8$, $d = 7$, and $w=3$, and for strings less than an exabyte in length, this is more than 83 bits of entropy.
 
 The combined input entropy needed is
 
 \[
-e(w-1)
-+ f k \left\lfloor\log_f \lfloor n/dw\rfloor\right\rfloor
-+ f k b \left\lfloor\log_f \lfloor n/dw\rfloor\right\rfloor
+e (w-1)
++ (f-1) k \left\lfloor\log_f \lfloor n/b d w\rfloor\right\rfloor
++ b f k \left\lfloor\log_f \lfloor n/b d w\rfloor\right\rfloor
 + b d w + k - 1
 \]
 
 When $b$ is 8, as in the AVX-512 version of HalftimeHash, this is less than 31KB for strings of length up to one exabyte -- 8.8KB for strings of length up to one megabyte.
 6.1KB of this is for hashing the stack.
+This could be reduced by hashing the stacks with unmodified tree hash and hashign the remaining untouched input string with another instantiation of HalftimeHash with smaller block size, but this adds complexity to the algorithm and reduces performance
 
-The number of multiplications is asymptotically driven by the EHC step, since the total is
+The number of multiplications is asymptotically driven by the EHC step, since the total is $(e(w-1) + k) b \lfloor n / b d w \rfloor + O(\log n)$ and $e(w-1)$ is significantly larger than $k$.
 
-\[
-en(w-1)/dw + nk/dw + f k b \left\lfloor\log_f \lfloor n/dw\rfloor\right\rfloor + b d w k
-\]
-
-\[
-= ((e(w-1) + k)/dw)n + O(\log n)
-\]
-
-For a string of length 1MB, 84\% of the multiplications happen in the EHC step, and the number of multiplications is about one per ten bytes of input.
+For a string of length 1MB, 84\% of the multiplications happen in the EHC step. %, and the number of multiplications is about one per ten bytes of input.
 Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in the EHC step.
 
 

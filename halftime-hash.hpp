@@ -691,6 +691,14 @@ inline void Combine2(const Block input[12], Block output[2]) {
 //  0   0   1   0   1   3   9   8   1   8
 //  0   0   0   1   1   4 -10   4  10   3
 //
+
+// NEW!
+// evenness: 3 weight: 21
+// 0   0   0   1   1   4   2   4   1   1
+// 0   1   2   0   0   1   1   2   4   1
+// 2   0   1   0   4   0   1   1   1   1
+// 1   1   0   1   0   0   4   1   2   8
+
 template <typename Badger, typename Block>
 inline void Combine4(const Block input[10], Block output[4]) {
   output[0] = input[0];
