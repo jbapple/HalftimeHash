@@ -793,8 +793,6 @@ The number of multiplications is asymptotically driven by the EHC step, since th
 For a string of length 1MB, 84\% of the multiplications happen in the EHC step. %, and the number of multiplications is about one per ten bytes of input.
 Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in the EHC step.
 
-
-
 %% \begin{tabular}{|l|c|c|c|c|c|c|}
 %%   \hline {\bf Step} & {\bf Multiplications} & {\bf In Entropy} & {\bf Out Entropy} & {\bf Out words}\\
 %%   \hline EHC & $e(w-1) \$ & $(32-p)k$ & 1 & $\lfloor n/dw \rfloor$ & $k \lfloor n/dw \rfloor$ \\
@@ -869,28 +867,26 @@ Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in th
 
 \section{Tests}
 
-This section covers performance testing for HalftimeHash.
-It is compared in various varieties with clhash and UMASH, two AU families that can hash long strings.
+This section covers performance testing for HalftimeHash compared to clhash and UMASH, two AU families that can hash long strings.
 Each of those are based on carryless (or ``polynomial'') multiplication over $\ints_2$ and a version of NH.
 
 HalftimeHash can vary over three dimensions:
 
 \begin{itemize}
 \item Block size, the number of instances interleaved in each execution
-\item Output size, which varies from 16 bytes to 40 bytes
-\item ISA, which varies from the C++ virtual machine (in other words, scalar operations on \texttt{uint32t}s) to AVX-512
+\item Output size, which varies from 16 bytes to 40 bytes in this implementation
+\item ISA, which varies from the C++ virtual machine (in other words, scalar operations on \texttt{uint32\_t}s) to AVX-512
 \end{itemize}
 
 A small sample of these are presented here, focused on large block sizes and ISA's with at least AVX2.
 
 \subsection{Throughput vs. output entropy}
 
-Figure \ref{frontier} displays the tension between higher output entropy and higher throughput.
+Figure \ref{frontier} displays the tension between higher output entropy and higher throughput for 250KB strings.
 Adding more output entropy increases the number of multiplications and additions that HalftimeHash has to perform.
 Nandi showed that this is true in the general case, as there is a matching upper and lower bound for the number of non-linear operations to be performed for a certain hash output width.
 
-This Figure also shows the three frontiers emerge, in which for UMASH, either clhash or clhash\_twice is a better choice, in that it has more output entropy and higher throughput.
-HalftimeHash dominated all UMASH and clhash variants tested.
+Three frontiers emerge, in which HalftimeHash always has better performance and lower collision probability than clhash and clhash similarly dominates UMASH.
 
 \includegraphics[width=8cm]{speed-v-epsilon.eps}
 \captionof{figure}{
@@ -921,11 +917,11 @@ Figure \ref{output-variants} shows the variation of HalftimeHash throughput betw
   The sharp drops in performance correspond to the L2 and L3 data cache sizes.
 }
 
-Figure \ref{vs-cl} adds comparisons between clhash, UMASH, and HalftimeHash.
-Although these machines support different ISA vector extensions, the pattern is similar: at high enough volume, HalftimeHash's throughput exceed that of the carryless-multiplication families.
+Figure \ref{vs-cl} adds comparisons between clhash, UMASH, and HalftimeHash across input sizes and ISA's.
+Although these machines support different ISA vector extensions, the pattern is similar: at high enough volume, HalftimeHash's throughput exceeds that of the carryless-multiplication families.
 The ``v3'' after the name indicates block size: v3 means a 256-bit block size, while v4 (the default) means 512-bit block size.
 Figure \ref{block-size} shows how the smaller block size performs better on the AMD chip.
-Cross-machine workloads ro persistent hash values may require a consistent block size between machines with different maximum SIMD register sizes, but Figure \ref{block-size} shows the performance penalty is not unreasonable.
+Cross-machine workloads or persistent hash values may require a consistent block size between machines with different maximum SIMD register sizes, but Figure \ref{block-size} shows the performance penalty is not unreasonable.
 
 \begin{figure*}
 \begin{tabular}{cccc}
@@ -943,7 +939,7 @@ Cross-machine workloads ro persistent hash values may require a consistent block
 }
 \end{figure*}
 
-\begin{table*}
+\begin{figure*}
 \begin{tabular}{cccc}
 \includegraphics[width=9cm]{amd-16.eps}
 &
@@ -954,7 +950,7 @@ Cross-machine workloads ro persistent hash values may require a consistent block
   AMD performance.
   AMD chips do not have AVX-512 instructions, so blocks of that size are simulated with 2 AVX2 registers.
   Using a block size of 256 bits performs better.}
-\end{table*}
+\end{figure*}
 
 %% TODO: compare to VHASH
 
@@ -969,7 +965,7 @@ Cross-machine workloads ro persistent hash values may require a consistent block
 
 HalftimeHash is a fast family for strings that are more than 1KB in size.
 Above was pondered combining HalftimeHash with hash families designed for shorter strings.
-The details remain future work.
+The details of that combination remain future work.
 
 Additionally, HalftimeHash depends on platforms supporting multiplication of two 32-bit integers that produces a 64-bit integer.
 This operation is present in many environments, but not all.

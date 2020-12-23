@@ -1,23 +1,23 @@
 set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
 set output 'speed-v-epsilon.eps'
-set xlabel 'nanoseconds per byte'
-set ylabel 'collision probability'
-set title "Speed vs. collision (lower left is better)"
+set xlabel 'bytes per nanosecond'
+set ylabel 'output entropy'
+set title "Speed vs. output entropy (upper right is better)"
 unset key
 set logscale y 2
 unset logscale x
 set grid
-set yrange[1e-50:1e-10]
-set xrange[0.01:0.09]
+set yrange[2**40:2**160]
+set xrange[0:80]
 unset offsets
-set format y '2^{%L}'
-plot 'points-example.txt' using (1/column(1)):2:3 with labels point pt 7 offset char 0,1
+set format y '%L'
+plot 'points-example.txt' using 1:(1/column(2)):3 with labels point pt 7 offset char 0,1
 
 set terminal postscript eps enhanced color size 7,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
 unset title
 unset offsets
 unset xlabel
-set ylabel 'billion bytes per second'
+set ylabel 'bytes per nanosecond'
 set key top left
 set key autotitle columnheader
 unset logscale y
@@ -68,7 +68,7 @@ set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive
 unset title
 unset offsets
 unset xlabel
-set ylabel 'billion bytes per second'
+set ylabel 'bytes per nanosecond'
 set key top left
 set key autotitle columnheader
 unset logscale y
@@ -99,10 +99,10 @@ set xrange[*:*]
 plot './c5a.large-clang-11-8c4af1f.txt' using 1:7 pt 6, './c5a.large-gcc-10-8c4af1f.txt' using 1:10 with lines lw 10, './c5a.large-clang-11-8c4af1f.txt' using 1:12 with lines
 
 set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
-set title "Input size vs. GB/s (higher is better)"
+set title "Input size vs. B/ns (higher is better)"
 unset offsets
 set xlabel 'input length in bytes'
-set ylabel 'billion bytes per second'
+set ylabel 'bytes per nanosecond'
 set key top left
 set key autotitle columnheader
 unset logscale y

@@ -348,12 +348,6 @@ struct EhcBadger {
     if (out_width == 5) return Encode5<Block>(io);
   }
 
-  static Block SimpleTimes(std::integral_constant<int, -17>, Block x) {
-    return Negate(Plus(LeftShift(x, 4), x));
-  }
-  static Block SimpleTimes(std::integral_constant<int, -10>, Block x) {
-    return Negate(Plus(LeftShift(x, 3), LeftShift(x, 2)));
-  }
   static Block SimpleTimes(std::integral_constant<int, -1>, Block x) {
     return Negate(x);
   }
@@ -378,12 +372,6 @@ struct EhcBadger {
   }
   static Block SimpleTimes(std::integral_constant<int, 9>, Block x) {
     return Plus(x, LeftShift(x, 3));
-  }
-  static Block SimpleTimes(std::integral_constant<int, 10>, Block x) {
-    return Plus(LeftShift(x, 3), LeftShift(x, 1));
-  }
-  static Block SimpleTimes(std::integral_constant<int, 17>, Block x) {
-    return Plus(LeftShift(x, 4), x);
   }
 
   template <int a>
@@ -701,22 +689,48 @@ inline void Combine2(const Block input[12], Block output[2]) {
 
 template <typename Badger, typename Block>
 inline void Combine4(const Block input[10], Block output[4]) {
-  output[0] = input[0];
+  output[2] = LeftShift(input[0], 1);
+  output[3] = input[0];
+
   output[1] = input[1];
-  output[2] = input[2];
-  output[3] = input[3];
+  output[3] = Plus(output[3], input[1]);
+
+  output[1] = Plus(output[1], LeftShift(input[2], 1));
+  output[2] = Plus(output[2], input[2]);
+
+  output[0] = input[3];
+  output[3] = Plus(output[3], input[3]);
 
   output[0] = Plus(output[0], input[4]);
-  output[1] = Plus(output[1], input[4]);
-  output[2] = Plus(output[2], input[4]);
-  output[3] = Plus(output[3], input[4]);
+  output[2] = Plus(output[2], LeftShift(input[4], 2));
 
-  Badger::template Dot4<1, 2, 3, 4>(output, input[5]);
-  Badger::template Dot4<17, 4, 9, -10>(output, input[6]);
-  Badger::template Dot4<2, 1, 8, 4>(output, input[7]);
-  Badger::template Dot4<4, 3, 1, 10>(output, input[8]);
-  Badger::template Dot4<-17, 4, 8, 3>(output, input[9]);
+  output[0] = Plus(output[0], LeftShift(input[5], 2));
+  output[1] = Plus(output[1], input[5]);
+
+  Badger::template Dot4<2, 1, 1, 4>(output, input[6]);
+  Badger::template Dot4<4, 2, 1, 1>(output, input[7]);
+  Badger::template Dot4<1, 4, 1, 2>(output, input[8]);
+  Badger::template Dot4<1, 1, 1, 8>(output, input[9]);
 }
+
+// template <typename Badger, typename Block>
+// inline void Combine4(const Block input[10], Block output[4]) {
+//   output[0] = input[0];
+//   output[1] = input[1];
+//   output[2] = input[2];
+//   output[3] = input[3];
+
+//   output[0] = Plus(output[0], input[4]);
+//   output[1] = Plus(output[1], input[4]);
+//   output[2] = Plus(output[2], input[4]);
+//   output[3] = Plus(output[3], input[4]);
+
+//   Badger::template Dot4<1, 2, 3, 4>(output, input[5]);
+//   Badger::template Dot4<17, 4, 9, -10>(output, input[6]);
+//   Badger::template Dot4<2, 1, 8, 4>(output, input[7]);
+//   Badger::template Dot4<4, 3, 1, 10>(output, input[8]);
+//   Badger::template Dot4<-17, 4, 8, 3>(output, input[9]);
+// }
 
 // evenness: 3 weight: 15
 // 1   0   0   0   0   1   1   2   4

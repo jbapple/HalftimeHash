@@ -4,7 +4,7 @@ all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe line-cl
 
 RELEASE_FLAGS = -ggdb3 -O3 -march=native -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -DNDEBUG \
-	-Wno-comment -Wno-ignored-attributes
+	-Wno-comment -Wno-ignored-attributes -Wno-constant-conversion
 
 #CXX_RELEASE-std=gnu++17
 #DEBUGFLAGS = $(FLAGS) -ggdb3 -O0 -fno-unroll-loops -UNDEBUG
