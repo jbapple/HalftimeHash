@@ -19,10 +19,8 @@ inline u512 Plus32(u512 a, u512 b) { return _mm512_add_epi32(a, b); }
 inline u512 Times(u512 a, u512 b) { return _mm512_mul_epu32(a, b); }
 inline u512 Xor(u512 a, u512 b) { return _mm512_xor_epi32(a, b); }
 inline uint64_t Sum(u512 a) { return _mm512_reduce_add_epi64(a); }
-// TODO: i is always the same?
-// inline u512 RightShift(u512 a, int i) { return _mm512_srli_epi64(a, i); }
-inline u512 RightShift(u512 a, int) { return _mm512_srli_epi64(a, 32); }
-//  inline u512 RightShift(u512 a, int i) { return _mm512_shuffle_epi32(a,
+inline u512 RightShift32(u512 a) { return _mm512_srli_epi64(a, 32); }
+//  inline u512 RightShift32(u512 a, int i) { return _mm512_shuffle_epi32(a,
 //  _MM_PERM_ACAC); }
 inline u512 LeftShift(u512 a, int i) { return _mm512_slli_epi64(a, i); }
 inline u512 Minus(u512 a, u512 b) { return _mm512_sub_epi64(a, b); }
@@ -45,7 +43,7 @@ inline u256 Plus32(u256 a, u256 b) { return _mm256_add_epi32(a, b); }
 inline u256 Times(u256 a, u256 b) { return _mm256_mul_epu32(a, b); }
 inline u256 Xor(u256 a, u256 b) { return _mm256_xor_si256(a, b); }
 inline u256 LeftShift(u256 a, int i) { return _mm256_slli_epi64(a, i); }
-inline u256 RightShift(u256 a, int i) { return _mm256_srli_epi64(a, i); }
+inline u256 RightShift32(u256 a) { return _mm256_srli_epi64(a, 32); }
 inline u256 Minus(u256 a, u256 b) { return _mm256_sub_epi64(a, b); }
 
 static inline u256 Negate(u256 a) {
@@ -81,7 +79,7 @@ inline u128 LeftShift(u128 a, int i) { return _mm_slli_epi64(a, i); }
 inline u128 Plus(u128 a, u128 b) { return _mm_add_epi64(a, b); }
 inline u128 Minus(u128 a, u128 b) { return _mm_sub_epi64(a, b); }
 inline u128 Plus32(u128 a, u128 b) { return _mm_add_epi32(a, b); }
-inline u128 RightShift(u128 a, int i) { return _mm_srli_epi64(a, i); }
+inline u128 RightShift32(u128 a) { return _mm_srli_epi64(a, 32); }
 inline u128 Times(u128 a, u128 b) { return _mm_mul_epu32(a, b); }
 inline u128 Xor(u128 a, u128 b) { return _mm_xor_si128(a, b); }
 
@@ -111,7 +109,7 @@ inline uint64_t Xor(uint64_t a, uint64_t b) { return a ^ b; }
 inline uint64_t Plus(uint64_t a, uint64_t b) { return a + b; }
 inline uint64_t Minus(uint64_t a, uint64_t b) { return a - b; }
 inline uint64_t LeftShift(uint64_t a, int s) { return a << s; }
-inline uint64_t RightShift(uint64_t a, int s) { return a >> s; }
+inline uint64_t RightShift32(uint64_t a) { return a >> 32; }
 inline uint64_t Sum(uint64_t a) { return a; }
 inline uint64_t Negate(uint64_t a) { return -a; }
 
@@ -319,7 +317,7 @@ struct EhcBadger {
 
   static Block Mix(Block input, Block entropy) {
     Block output = Plus32(entropy, input);
-    Block twin = RightShift(output, 32);
+    Block twin = RightShift32(output);
     output = Times(output, twin);
     return output;
   }
@@ -892,10 +890,10 @@ inline Repeat<Block, count> LeftShift(Repeat<Block, count> a, int s) {
 }
 
 template <typename Block, unsigned count>
-inline Repeat<Block, count> RightShift(Repeat<Block, count> a, int s) {
+inline Repeat<Block, count> RightShift32(Repeat<Block, count> a) {
   Repeat<Block, count> result;
   for (unsigned i = 0; i < count; ++i) {
-    result.it[i] = RightShift(a.it[i], s);
+    result.it[i] = RightShift32(a.it[i]);
   }
   return result;
 }
