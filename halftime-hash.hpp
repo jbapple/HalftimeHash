@@ -338,6 +338,18 @@ struct EhcBadger {
     }
   }
 
+  static void PartialUpperLayer(size_t length, const Block (&input)[fanout][out_width],
+                                const uint64_t entropy[out_width * (fanout - 1)],
+                                Block (&output)[out_width]) {
+    for (unsigned i = 0; i < out_width; ++i) {
+      output[i] = input[0][i];
+      for (unsigned j = 1; j < length; ++j) {
+        output[i] =
+            Plus(output[i], MixOne(input[j][i], entropy[(fanout - 1) * i + j - 1]));
+      }
+    }
+  }
+
   static inline void Encode(Block io[encoded_dimension * in_width]) {
     static_assert(2 <= out_width && out_width <= 5, "uhoh");
     if (out_width == 3) return Encode3<Block>(io);
@@ -467,6 +479,31 @@ struct EhcBadger {
     }
   }
 
+  //using TreeResult = const Block[out_width];
+  static const Block * CompactDfsTree(Block stack[][fanout][out_width], int stack_lengths[],
+                                    const uint64_t* entropy) {
+    unsigned stack_height = 0;
+    while (stack_lengths[stack_height++]);
+    int i = 0;
+    while (stack_lengths[i] == fanout) ++i;
+    for (int j = i - 1; j >= 0; --j) {
+      EhcUpperLayer(stack[j],
+                    &entropy[encoded_dimension * in_width + (fanout - 1) * out_width * j],
+                    stack[j + 1][stack_lengths[j + 1]]);
+      stack_lengths[j] = 0;
+      stack_lengths[j + 1] += 1;
+    }
+    for(unsigned j = 0; j < stack_height; ++j) {
+      PartialUpperLayer(
+          stack_lengths[j], stack[j],
+          &entropy[encoded_dimension * in_width + (fanout - 1) * out_width * j],
+          stack[j + 1][stack_lengths[j + 1]]);
+      stack_lengths[j] = 0;
+      stack_lengths[j + 1] += 1;
+    }
+    return stack[stack_height][0];
+  }
+
   static constexpr uint64_t FloorLog(uint64_t a, uint64_t b) {
     return (b < a) ? 0 : 1 + (FloorLog(a, b / a));
   }
@@ -487,7 +524,7 @@ struct EhcBadger {
    public:
     BlockGreedy(const uint64_t seeds[]) : seeds(seeds) {}
 
-    void Insert(const Block (&x)[out_width]) {
+    void Insert(const Block x[out_width]) {
       for (unsigned i = 0; i < out_width; ++i) {
         accum[i] = Plus(accum[i], Mix(x[i], BlockWrapper::LoadBlock(seeds)));
         seeds += sizeof(Block) / sizeof(uint64_t);
@@ -511,16 +548,18 @@ struct EhcBadger {
     }
   };
 
-  static void DfsGreedyFinalizer(const Block stack[][fanout][out_width],
-                                 const int stack_lengths[], const char* char_input,
-                                 size_t char_length, const uint64_t* entropy,
-                                 uint64_t output[out_width]) {
+  static void DfsGreedyFinalizer(Block stack[][fanout][out_width], int stack_lengths[],
+                                 const char* char_input, size_t char_length,
+                                 const uint64_t* entropy, uint64_t output[out_width]) {
     BlockGreedy b(entropy);
+    b.Insert(CompactDfsTree(stack, stack_lengths, entropy));
+    /*
     for (int j = 0; stack_lengths[j] > 0; ++j) {
       for (int k = 0; k < stack_lengths[j]; k += 1) {
         b.Insert(stack[j][k]);
       }
     }
+    */
 
     size_t i = 0;
     for (; i + sizeof(Block) <= char_length; i += sizeof(Block)) {
