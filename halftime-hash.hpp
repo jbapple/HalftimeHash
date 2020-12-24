@@ -469,15 +469,16 @@ struct EhcBadger {
     }
   }
 
+  static constexpr uint64_t FloorLog(uint64_t a, uint64_t b) {
+    return (b < a) ? 0 : 1 + (FloorLog(a, b / a));
+  }
+
   static constexpr size_t GetEntropyBytesNeeded(size_t n) {
-    return  // EHC:
-        encoded_dimension * out_width * sizeof(uint64_t)
-        // treehash
-        + fanout * sizeof(uint64_t) * CeilingLog2(n / sizeof(Block) / 3) /
-              CeilingLog2(fanout)
-      // cleanup TODO FIXME
-        // tabulation
-        + (1 + out_width) * (1 << CHAR_BIT) * sizeof(uint64_t) * sizeof(uint64_t);
+    auto b = sizeof(Block) / sizeof(uint64_t);
+    auto h = FloorLog(fanout, n / b / dimension / in_width);
+    return sizeof(uint64_t) *
+           (encoded_dimension * (in_width - 1) + (fanout - 1) * out_width * h +
+            b * fanout * out_width * h + b * dimension * in_width + out_width - 1);
   }
 
   struct BlockGreedy {
