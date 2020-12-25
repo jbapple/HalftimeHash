@@ -13,6 +13,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 
 using namespace std;
 
@@ -69,7 +70,7 @@ inline Duration TimeMulti(unsigned count, U&&... args) {
          i *= 2;
          plateau = 0;
        }
-       if (plateau >= 20) break;
+       if (plateau >= 8) break;
      }
   } else {
     auto before = Now();
@@ -121,8 +122,8 @@ uint64_t umash128(const uint64_t *params, const char *data, const size_t length)
 
 int main(int argc, char** argv) {
   auto min_length = (argc > 1) ? To<uint64_t>(argv[1]) : 1;
-  auto max_length = (argc > 2) ? To<uint64_t>(argv[2]) : 1000 * 1000;
-  auto percent_increment = (argc > 3) ? To<double>(argv[3]) : 1;
+  auto max_length = (argc > 2) ? To<uint64_t>(argv[2]) : 4000;
+  auto percent_increment = (argc > 3) ? To<double>(argv[3]) : 2;
   max_length = max(max_length, min_length);
   uint64_t entropy[32000 / sizeof(uint64_t)] = {};
 
@@ -138,7 +139,7 @@ int main(int argc, char** argv) {
   vector<char> data(max_length, 0);
 
   cout << "0 \t best_hh";
-  for (int i : {4, 3}) {
+  for (int i : {4}) {
     for (int j : {2, 3, 4, 5}) {
       cout << "\t"
            << "Halftime" << (j * 8) << "v" << i;
@@ -147,7 +148,7 @@ int main(int argc, char** argv) {
   cout << "\t clhash \t clhash128 \t umash \t umash128";
   cout << endl;
 
-  uint64_t loop_count = 10;
+  uint64_t loop_count = 4;
 
   map<uint64_t, array<double, 20>> timings;
   for (uint64_t j = 0; j < loop_count; ++j) {
@@ -156,16 +157,16 @@ int main(int argc, char** argv) {
       auto reps = 50.0 * 1000 * 1000 / (i * sqrt(i) + 1);
       reps = max(reps, 8.0);
       reps = min(1000.0 * 1000, reps);
-      Duration hh_time[8] = {
+      Duration hh_time[4] = {
           TimeMulti<WrapHash<halftime_hash::V4<2>>>(reps, entropy, data.data(), i),
           TimeMulti<WrapHash<halftime_hash::V4<3>>>(reps, entropy, data.data(), i),
           TimeMulti<WrapHash<halftime_hash::V4<4>>>(reps, entropy, data.data(), i),
           TimeMulti<WrapHash<halftime_hash::V4<5>>>(reps, entropy, data.data(), i),
 
-          TimeMulti<WrapHash<halftime_hash::V3<2>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<halftime_hash::V3<3>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<halftime_hash::V3<4>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<halftime_hash::V3<5>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<halftime_hash::V3<2>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<halftime_hash::V3<3>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<halftime_hash::V3<4>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<halftime_hash::V3<5>>>(reps, entropy, data.data(), i),
 
           // TimeMulti<WrapHash<halftime_hash::V2<2>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<halftime_hash::V2<3>>>(reps, entropy, data.data(), i),
@@ -187,7 +188,7 @@ int main(int argc, char** argv) {
         timings[i] = {};
       }
       int k = 0;
-      for (; k < 8; ++k) {
+      for (; k < 4; ++k) {
         timings[i][k] = max(timings[i][k], 1.0 * i / hh_time[k].count());
       }
 
@@ -205,7 +206,7 @@ int main(int argc, char** argv) {
       best_hh = max(best_hh, j.second[i]);
     }
     cout << "\t" << best_hh;
-    for (int i = 0; i < 12; ++i) {
+    for (int i = 0; i < 8; ++i) {
       cout << "\t" << j.second[i];
     }
     cout << endl;

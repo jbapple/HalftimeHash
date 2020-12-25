@@ -1,4 +1,5 @@
 #include <immintrin.h>
+
 #include <cassert>
 #include <climits>
 #include <cstdint>
@@ -88,9 +89,7 @@ static inline u128 Negate(u128 a) {
   return Minus(zero, a);
 }
 
-inline uint64_t Sum(u128 a) {
-  return _mm_extract_epi64(a, 0) + _mm_extract_epi64(a, 1);
-}
+inline uint64_t Sum(u128 a) { return _mm_extract_epi64(a, 0) + _mm_extract_epi64(a, 1); }
 
 struct BlockWrapper128 {
   using Block = u128;
@@ -140,19 +139,20 @@ struct BlockWrapperScalar {
 };
 
 template <typename Block>
-inline void Encode3(Block io[9 * 3]) {
+inline void Encode3(Block raw_io[9 * 3]) {
+  auto io = reinterpret_cast<Block(*)[3]>(raw_io);
   constexpr unsigned x = 0, y = 1, z = 2;
 
-  const Block* iter = &io[0];
-  io[7 * 3 + x] = io[8 * 3 + x] = iter[x];
-  io[7 * 3 + y] = io[8 * 3 + y] = iter[y];
-  io[7 * 3 + z] = io[8 * 3 + z] = iter[z];
-  iter += 3;
+  const Block* iter = io[0];
+  io[7][x] = io[8][x] = iter[x];
+  io[7][y] = io[8][y] = iter[y];
+  io[7][z] = io[8][z] = iter[z];
+  iter += 1;
 
   auto DistributeRaw = [io, iter](unsigned slot, unsigned label,
                                   std::initializer_list<unsigned> rest) {
     for (unsigned i : rest) {
-      io[slot * 3 + i] = Xor(io[slot * 3 + i], iter[label]);
+      io[slot][i] = Xor(io[slot][i], iter[label]);
     }
   };
 
@@ -163,14 +163,14 @@ inline void Encode3(Block io[9 * 3]) {
     DistributeRaw(idx, x, a);
     DistributeRaw(idx, y, b);
     DistributeRaw(idx, z, c);
-    iter += 3;
+    iter += 1;
   };
 
-  while (iter != io + 9 * 3) {
+  while (iter != io[9]) {
     Distribute3(7, {x}, {y}, {z});
   }
 
-  iter = &io[3];
+  iter = io[1];
   Distribute3(8, {z}, {x, z}, {y});
   Distribute3(8, {x, z}, {x, y, z}, {y, z});
   Distribute3(8, {y}, {y, z}, {x, z});
@@ -180,30 +180,33 @@ inline void Encode3(Block io[9 * 3]) {
 }
 
 template <typename Block>
-inline void Encode2(Block io[12 * 2]) {
+inline void Encode2(Block raw_io[12 * 2]) {
+  auto io = reinterpret_cast<Block(*)[2]>(raw_io);
   for (int i = 0; i < 2; ++i) {
-    io[11 * 2 + i] = io[i];
+    io[11][i] = io[0][i];
     for (int j = 1; j < 11; ++j) {
-      io[11 * 2 + i] = Xor(io[11 * 2 + i], io[j * 2 + i]);
+      io[11][i] = Xor(io[11][i], io[j][i]);
     }
   }
 }
 
 // https://docs.switzernet.com/people/emin-gabrielyan/051102-erasure-10-7-resilient/
 template <typename Block>
-inline void Encode4(Block io[10 * 3]) {
+inline void Encode4(Block raw_io[10 * 3]) {
+  auto io = reinterpret_cast<Block(*)[3]>(raw_io);
+
   constexpr unsigned x = 0, y = 1, z = 2;
 
-  const Block* iter = &io[0];
-  io[7 * 3 + x] = io[8 * 3 + x] = io[9 * 3 + x] = iter[x];
-  io[7 * 3 + y] = io[8 * 3 + y] = io[9 * 3 + y] = iter[y];
-  io[7 * 3 + z] = io[8 * 3 + z] = io[9 * 3 + z] = iter[z];
-  iter += 3;
+  const Block* iter = io[0];
+  io[7][x] = io[8][x] = io[9][x] = iter[x];
+  io[7][y] = io[8][y] = io[9][y] = iter[y];
+  io[7][z] = io[8][z] = io[9][z] = iter[z];
+  iter += 1;
 
   auto DistributeRaw = [io, iter](unsigned slot, unsigned label,
                                   std::initializer_list<unsigned> rest) {
     for (unsigned i : rest) {
-      io[slot * 3 + i] = Xor(io[slot * 3 + i], iter[label]);
+      io[slot][i] = Xor(io[slot][i], iter[label]);
     }
   };
 
@@ -214,14 +217,14 @@ inline void Encode4(Block io[10 * 3]) {
     DistributeRaw(idx, x, a);
     DistributeRaw(idx, y, b);
     DistributeRaw(idx, z, c);
-    iter += 3;
+    iter += 1;
   };
 
-  while (iter != io + 10 * 3) {
+  while (iter != io[10]) {
     Distribute3(7, {x}, {y}, {z});
   }
 
-  iter = &io[3];
+  iter = io[1];
   Distribute3(8, {z}, {x, z}, {y});           // 73
   Distribute3(8, {x, z}, {x, y, z}, {y, z});  // 140
   Distribute3(8, {y}, {y, z}, {x, z});        // 167
@@ -229,7 +232,7 @@ inline void Encode4(Block io[10 * 3]) {
   Distribute3(8, {y, z}, {x, y}, {x, y, z});  // 292
   Distribute3(8, {x, y, z}, {x}, {x, y});     // 323
 
-  iter = &io[3];
+  iter = io[1];
   Distribute3(9, {x, z}, {x, y, z}, {y, z});  // 140
   Distribute3(9, {x, y}, {z}, {x});           // 198
   Distribute3(9, {z}, {x, z}, {y});           // 73
@@ -240,23 +243,25 @@ inline void Encode4(Block io[10 * 3]) {
 
 // https://docs.switzernet.com/people/emin-gabrielyan/051103-erasure-9-5-resilient/
 template <typename Block>
-inline void Encode5(Block io[9 * 3]) {
+inline void Encode5(Block raw_io[9 * 3]) {
+  auto io = reinterpret_cast<Block(*)[3]>(raw_io);
+
   constexpr unsigned x = 0, y = 1, z = 2;
 
-  const Block* iter = &io[0];
-  io[5 * 3 + x] = io[6 * 3 + x] = iter[x];
-  io[5 * 3 + y] = io[6 * 3 + y] = iter[y];
-  io[5 * 3 + z] = io[6 * 3 + z] = iter[z];
+  const Block* iter = io[0];
+  io[5][x] = io[6][x] = iter[x];
+  io[5][y] = io[6][y] = iter[y];
+  io[5][z] = io[6][z] = iter[z];
 
-  io[7 * 3 + x] = io[8 * 3 + x] = iter[y];
-  io[7 * 3 + y] = io[8 * 3 + y] = iter[z];
-  io[7 * 3 + z] = io[8 * 3 + z] = Xor(iter[x], iter[y]);
-  iter += 3;
+  io[7][x] = io[8][x] = iter[y];
+  io[7][y] = io[8][y] = iter[z];
+  io[7][z] = io[8][z] = Xor(iter[x], iter[y]);
+  iter += 1;
 
   auto DistributeRaw = [io, iter](unsigned slot, unsigned label,
                                   std::initializer_list<unsigned> rest) {
     for (unsigned i : rest) {
-      io[slot * 3 + i] = Xor(io[slot * 3 + i], iter[label]);
+      io[slot][i] = Xor(io[slot][i], iter[label]);
     }
   };
 
@@ -267,26 +272,26 @@ inline void Encode5(Block io[9 * 3]) {
     DistributeRaw(idx, x, a);
     DistributeRaw(idx, y, b);
     DistributeRaw(idx, z, c);
-    iter += 3;
+    iter += 1;
   };
 
-  while (iter != io + 9 * 3) {
+  while (iter != io[9]) {
     Distribute3(5, {x}, {y}, {z});
   }
 
-  iter = &io[3];
+  iter = io[1];
   Distribute3(6, {z}, {x, z}, {y});           // 73
   Distribute3(6, {x, z}, {x, y, z}, {y, z});  // 140
   Distribute3(6, {y}, {y, z}, {x, z});        // 167
   Distribute3(6, {x, y}, {z}, {x});           // 198
 
-  iter = &io[3];
+  iter = io[1];
   Distribute3(7, {x, y, z}, {x}, {x, y});     // 323
   Distribute3(7, {x, z}, {x, y, z}, {y, z});  // 140
   Distribute3(7, {x}, {y}, {z});              // 11
   Distribute3(7, {y}, {y, z}, {x, z});        // 167
 
-  iter = &io[3];
+  iter = io[1];
   Distribute3(8, {x}, {y}, {z});              // 11
   Distribute3(8, {x, y}, {z}, {x});           // 198
   Distribute3(8, {y, z}, {x, y}, {x, y, z});  // 292
@@ -338,17 +343,15 @@ struct EhcBadger {
     }
   }
 
-  static inline void Encode(Block io[encoded_dimension * in_width]) {
+  static void Encode(Block io[encoded_dimension][in_width]) {
     static_assert(2 <= out_width && out_width <= 5, "uhoh");
-    if (out_width == 3) return Encode3<Block>(io);
-    if (out_width == 2) return Encode2<Block>(io);
-    if (out_width == 4) return Encode4<Block>(io);
-    if (out_width == 5) return Encode5<Block>(io);
+    if (out_width == 3) return Encode3<Block>(&io[0][0]);
+    if (out_width == 2) return Encode2<Block>(&io[0][0]);
+    if (out_width == 4) return Encode4<Block>(&io[0][0]);
+    if (out_width == 5) return Encode5<Block>(&io[0][0]);
   }
 
-  static Block SimpleTimes(std::integral_constant<int, -1>, Block x) {
-    return Negate(x);
-  }
+  static Block SimpleTimes(std::integral_constant<int, -1>, Block x) { return Negate(x); }
   static Block SimpleTimes(std::integral_constant<int, 1>, Block x) { return x; }
   static Block SimpleTimes(std::integral_constant<int, 2>, Block x) {
     return LeftShift(x, 1);
@@ -401,8 +404,7 @@ struct EhcBadger {
     sinks[4] = Plus(sinks[4], SimplerTimes<e>(x));
   }
 
-  static void Combine(const Block input[encoded_dimension],
-                      Block (&output)[out_width]) {
+  static void Combine(const Block input[encoded_dimension], Block (&output)[out_width]) {
     if (out_width == 3) return Combine3<EhcBadger>(input, output);
     if (out_width == 2) return Combine2<EhcBadger>(input, output);
     if (out_width == 4) return Combine4<EhcBadger>(input, output);
@@ -410,35 +412,54 @@ struct EhcBadger {
   }
 
   static void Load(const char input[dimension * in_width * sizeof(Block)],
-                   Block output[dimension * in_width]) {
+                   Block output[dimension][in_width]) {
     static_assert(dimension * in_width <= 28, "");
 #ifndef __clang__
 #pragma GCC unroll 28
+#else
+#pragma unroll
 #endif
-    for (unsigned i = 0; i < dimension * in_width; ++i) {
-      output[i] = BlockWrapper::LoadBlock(&input[i * sizeof(Block)]);
+    for (unsigned i = 0; i < dimension; ++i) {
+#ifndef __clang__
+#pragma GCC unroll 28
+#else
+#pragma unroll
+#endif
+      for (unsigned j = 0; j < in_width; ++j) {
+        output[i][j] =
+            BlockWrapper::LoadBlock(&input[(i * in_width + j) * sizeof(Block)]);
+      }
     }
   }
 
-  static void Hash(const Block (&input)[encoded_dimension * in_width],
-                   const uint64_t entropy[encoded_dimension * in_width],
+  // TODO: input should be 2d to prevent mistakes like iteration order switching
+  static void Hash(const Block (&input)[encoded_dimension][in_width],
+                   const uint64_t entropy[encoded_dimension][in_width],
                    Block output[encoded_dimension]) {
-    auto a = &input[0];
-    auto b = &entropy[0];
+    // auto a = input[0];
+    // auto b = entropy[0];
     for (unsigned i = 0; i < encoded_dimension; ++i) {
-      output[i] = *a++;
+      output[i] = MixOne(input[i][0], entropy[i][0]);
+      // TODO: should loading take care of this?
     }
     for (unsigned j = 1; j < in_width; ++j) {
+      // a = &input[j];
+      // b = &entropy[j];
       for (unsigned i = 0; i < encoded_dimension; ++i) {
-        output[i] = Plus(output[i], MixOne(*a++, *b++));
+        // TODO: reduce entropy index here
+        output[i] = Plus(output[i], MixOne(input[i][j], entropy[i][j]));
+        // a += in_width;
+        // TODO: this might be optional; it might not matter which way we iterate over
+        // entropy
+        // b += in_width;
       }
     }
   }
 
   static void EhcBaseLayer(const char input[dimension * in_width * sizeof(Block)],
-                           const uint64_t raw_entropy[encoded_dimension * in_width],
+                           const uint64_t raw_entropy[encoded_dimension][in_width],
                            Block (&output)[out_width]) {
-    Block scratch[encoded_dimension * in_width];
+    Block scratch[encoded_dimension][in_width];
     Block tmpout[encoded_dimension];
     Load(input, scratch);
     Encode(scratch);
@@ -449,6 +470,7 @@ struct EhcBadger {
   static void DfsTreeHash(const char* data, size_t block_group_length,
                           Block stack[][fanout][out_width], int stack_lengths[],
                           const uint64_t* entropy) {
+    auto entropy_matrix = reinterpret_cast<const uint64_t(*)[in_width]>(entropy);
     for (size_t k = 0; k < block_group_length; ++k) {
       int i = 0;
       while (stack_lengths[i] == fanout) ++i;
@@ -461,14 +483,14 @@ struct EhcBadger {
         stack_lengths[j + 1] += 1;
       }
 
-      EhcBaseLayer(&data[k * dimension * in_width * sizeof(Block)],
-                   &entropy[0], stack[0][stack_lengths[0]]);
+      EhcBaseLayer(&data[k * dimension * in_width * sizeof(Block)], entropy_matrix,
+                   stack[0][stack_lengths[0]]);
       stack_lengths[0] += 1;
     }
   }
 
   static constexpr uint64_t FloorLog(uint64_t a, uint64_t b) {
-    return (b < a) ? 0 : 1 + (FloorLog(a, b / a));
+    return (0 == a) ? 0 : ((b < a) ? 0 : 1 + (FloorLog(a, b / a)));
   }
 
   static constexpr size_t GetEntropyBytesNeeded(size_t n) {
@@ -496,9 +518,9 @@ struct EhcBadger {
 
     void Insert(Block x) {
       for (unsigned i = 0; i < out_width; ++i) {
-        accum[i] = Plus(accum[i],
-                        Mix(x, BlockWrapper::LoadBlock(
-                                   &seeds[i * sizeof(Block) / sizeof(uint64_t)])));
+        accum[i] =
+            Plus(accum[i], Mix(x, BlockWrapper::LoadBlock(
+                                      &seeds[i * sizeof(Block) / sizeof(uint64_t)])));
       }
       // Toeplitz
       seeds += sizeof(Block) / sizeof(uint64_t);
@@ -546,7 +568,6 @@ struct EhcBadger {
     b.Hash(output);
   }
 };  // EhcBadger
-
 
 // %  1   0   0   1   1   1  17   1   4
 // %  0   1   0  -2  18   4  -1   1   1
@@ -784,8 +805,7 @@ void Hash(const uint64_t* entropy, const char* char_input, size_t length,
 
   EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension, out_width,
             kFanout>::DfsTreeHash(char_input, wide_length, stack, stack_lengths, entropy);
-  entropy +=
-      encoded_dimension * in_width + out_width * (kFanout - 1) * kMaxStackSize;
+  entropy += encoded_dimension * in_width + out_width * (kFanout - 1) * kMaxStackSize;
 
   auto used_chars = wide_length * sizeof(Block) * (dimension * in_width);
   char_input += used_chars;
@@ -927,8 +947,8 @@ inline Repeat<Block, count> Negate(Repeat<Block, count> a) {
 
 }  // namespace
 
-template <void (*Hasher)(const uint64_t* entropy, const char* char_input,
-                         size_t length, uint64_t output[]),
+template <void (*Hasher)(const uint64_t* entropy, const char* char_input, size_t length,
+                         uint64_t output[]),
           int width>
 inline uint64_t TabulateAfter(const uint64_t* entropy, const char* char_input,
                               size_t length) {
@@ -950,8 +970,8 @@ template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
           unsigned out_width>
 inline void V4Avx512(const uint64_t* entropy, const char* char_input, size_t length,
                      uint64_t output[out_width]) {
-   return Hash<BlockWrapper512, dimension, in_width, encoded_dimension, out_width>(
-       entropy, char_input, length, output);
+  return Hash<BlockWrapper512, dimension, in_width, encoded_dimension, out_width>(
+      entropy, char_input, length, output);
 }
 
 #endif
@@ -970,8 +990,8 @@ template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
           unsigned out_width>
 inline void V4Avx2(const uint64_t* entropy, const char* char_input, size_t length,
                    uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapper256, 2>, dimension, in_width,
-              encoded_dimension, out_width>(entropy, char_input, length, output);
+  return Hash<RepeatWrapper<BlockWrapper256, 2>, dimension, in_width, encoded_dimension,
+              out_width>(entropy, char_input, length, output);
 }
 
 #endif
@@ -990,16 +1010,16 @@ template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
           unsigned out_width>
 inline void V3Sse2(const uint64_t* entropy, const char* char_input, size_t length,
                    uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapper128, 2>, dimension, in_width,
-              encoded_dimension, out_width>(entropy, char_input, length, output);
+  return Hash<RepeatWrapper<BlockWrapper128, 2>, dimension, in_width, encoded_dimension,
+              out_width>(entropy, char_input, length, output);
 }
 
 template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
           unsigned out_width>
 inline void V4Sse2(const uint64_t* entropy, const char* char_input, size_t length,
                    uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapper128, 4>, dimension, in_width,
-              encoded_dimension, out_width>(entropy, char_input, length, output);
+  return Hash<RepeatWrapper<BlockWrapper128, 4>, dimension, in_width, encoded_dimension,
+              out_width>(entropy, char_input, length, output);
 }
 
 #endif
@@ -1038,10 +1058,10 @@ inline void V1Scalar(const uint64_t* entropy, const char* char_input, size_t len
 
 template <unsigned out_width>
 inline constexpr size_t GetEntropyBytesNeeded(size_t n) {
-  return (3 == out_width) ? EhcBadger<BlockWrapperScalar, 7, 3, 9,
-                                      out_width>::GetEntropyBytesNeeded(n)
-                          : EhcBadger<BlockWrapperScalar, 11, 2, 12,
-                                      out_width>::GetEntropyBytesNeeded(n);
+  return (3 == out_width)
+             ? EhcBadger<BlockWrapperScalar, 7, 3, 9, out_width>::GetEntropyBytesNeeded(n)
+             : EhcBadger<BlockWrapperScalar, 11, 2, 12, out_width>::GetEntropyBytesNeeded(
+                   n);
 }
 
 template <unsigned out_width>
