@@ -3,7 +3,7 @@
 all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe \
 	line-cl-hh24.eps amd-16.eps gcc-local-hh4.eps test-read-each-byte.exe test-read-each-byte.debug-exe no-collisions.exe no-collisions.debug-exe
 
-RELEASE_FLAGS = -ggdb3 -O3 -march=x86-64 -mpclmul -mssse3 -Wall -Wextra -Wstrict-aliasing \
+RELEASE_FLAGS = -ggdb3 -O3 -march=native -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -DNDEBUG \
 	-Wno-comment -Wno-ignored-attributes -Wno-constant-conversion \
 	# -fsanitize=memory -fsanitize-blacklist=deny-list.txt #-stdlib=libc++
