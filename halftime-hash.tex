@@ -92,7 +92,7 @@
 HalftimeHash is a new algorithm for hashing long strings.
 The goals are few collisions (different inputs that produce identical output hash values), high performance, and portability -- HalftimeHash should be easy to implement correctly on new ISA's and easy to code in almost any programming language.
 
-Compared to the fastest universal hash functions on long strings, clhash and UMASH, HalftimeHash decreases collision probability while also increasing performance by over 70\%.
+Compared to the fastest universal hash functions on long strings, clhash and UMASH, HalftimeHash decreases collision probability while also increasing performance by over 50\%.
 \end{abstract}
 
 \maketitle
@@ -167,8 +167,8 @@ VHASH similarly came about before EHC and is an update to UHASH designed to take
 HalftimeHash uses less than 1000 lines of code in C++, does not use any assembly, and makes spare use of the C++ standard library.
 It can take advantage of vector ISA extensions like AVX-512, AVX2, and SSE, but it also runs on the C++ virtual machine model with no architecture-specific features.
 It is a parameterized algorithm that supports straightforward creation of new versions with larger SIMD register sizes or longer output hash values.
-On strings longer than 1KB, some variants are up to 130\% faster than clhash, the AU hash family that comes closest in performance to HalftimeHash.
-It also surpasses the performance of Fast Positive Hash, falkhash, xxh3, and MeowHash.
+On strings longer than 1KB, HalftimeHash is typically 55\% faster than clhash, the AU hash family that comes closest in performance to HalftimeHash.
+It also surpasses the performance of other high-performance string hashing algorithms that don't have AU guarantees such as Fast Positive Hash, falkhash, xxh3, and MeowHash.
 % TODO: graph this perf comparison with other non-universal families
 
 \section{Notations and Conventions}
@@ -914,7 +914,7 @@ Three frontiers emerge, in which HalftimeHash always has better performance and 
   \label{frontier}
   Trade-offs for almost-universal string hashing functions on strings of size 250KB on an i7-7800x with AVX-512.
   The upper right corner is ideal: low execution time and low collision probability.
-  Note that the clhash and UMASH executions are not along the efficient frontier / layer-of-maxima, in that one version of HalftimeHash is always faster and has lower collision probability. \protect\cite{layer-of-maxima}
+  Note that the clhash and UMASH executions are not along the efficient frontier / layer-of-maxima, in that for each clhash / UMASH version, at least one version of HalftimeHash is faster and has lower collision probability. \protect\cite{layer-of-maxima}
   This contrasts with the case of short strings, where clhash and UMASH have better performance.
 }
 
@@ -934,7 +934,7 @@ Figure \ref{output-variants} shows the variation of HalftimeHash throughput betw
 \captionof{figure}{
   \label{output-variants}
   Different output widths of HalftimeHash.
-  Note that even the family with the longest output of 40 bytes is faster than clhash and UMASH; see Figure \protect\ref{frontier}.
+  %Note that even the family with the longest output of 40 bytes is compet than clhash and UMASH; see Figure \protect\ref{frontier}.
   The sharp drops in performance correspond to the L2 and L3 data cache sizes.
 }
 
