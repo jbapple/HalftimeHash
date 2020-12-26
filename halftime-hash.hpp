@@ -74,43 +74,52 @@ struct BlockWrapper256 {
 
 #if __SSE2__
 
-using u128 = __m128i;
+struct u128 {
 
-inline u128 LeftShift(u128 a, int i) { return _mm_slli_epi64(a, i); }
-inline u128 Plus(u128 a, u128 b) { return _mm_add_epi64(a, b); }
-inline u128 Minus(u128 a, u128 b) { return _mm_sub_epi64(a, b); }
-inline u128 Plus32(u128 a, u128 b) { return _mm_add_epi32(a, b); }
-inline u128 RightShift32(u128 a) { return _mm_srli_epi64(a, 32); }
-inline u128 Times(u128 a, u128 b) { return _mm_mul_epu32(a, b); }
-inline u128 Xor(u128 a, u128 b) { return _mm_xor_si128(a, b); }
+  __m128i payload;
 
-static inline u128 Negate(u128 a) {
-  const auto zero = _mm_set1_epi64x(0);
-  return Minus(zero, a);
+  u128(__m128i payload) : payload(payload) {}
+
+  u128(){};
+  explicit u128(uint64_t x) : payload(_mm_set1_epi64x(x)) {}
+
+  u128 operator^(u128 b) const { return {_mm_xor_si128(payload, b.payload)}; }
+  void operator^=(u128 that) { *this = *this ^ that; }
+  u128 operator+(u128 b) const { return {_mm_add_epi64(payload, b.payload)}; }
+  void operator+=(u128 that) { *this = *this + that; }
+  u128 operator-(u128 b) const { return {_mm_sub_epi64(payload, b.payload)}; }
+  u128 operator-() const { return u128(0ul) - payload; }
+  u128 operator>>(int x) const { return {_mm_srli_epi64(payload, x)}; }
+  u128 operator<<(int x) const { return {_mm_slli_epi64(payload, x)}; }
+};
+
+template <typename T>
+T LoadPointer(const void*);
+
+template <>
+u128 LoadPointer<u128>(const void* x) {
+  return {_mm_loadu_si128(reinterpret_cast<const __m128i*>(x))};
 }
 
-inline uint64_t Sum(u128 a) { return _mm_extract_epi64(a, 0) + _mm_extract_epi64(a, 1); }
+u128 Times32(u128 a, u128 b) { return {_mm_mul_epu32(a.payload, b.payload)}; }
 
-struct BlockWrapper128 {
-  using Block = u128;
+u128 Plus32(u128 a, u128 b) { return {_mm_add_epi32(a.payload, b.payload)}; }
 
-  static u128 LoadBlock(const void* x) {
-    auto y = reinterpret_cast<const u128*>(x);
-    return _mm_loadu_si128(y);
-  }
-
-  static u128 LoadOne(uint64_t entropy) { return _mm_set1_epi64x(entropy); }
-};
+uint64_t Sum(u128 a) {
+  return _mm_extract_epi64(a.payload, 0) + _mm_extract_epi64(a.payload, 1);
+}
 
 #endif
 
-inline uint64_t Xor(uint64_t a, uint64_t b) { return a ^ b; }
-inline uint64_t Plus(uint64_t a, uint64_t b) { return a + b; }
-inline uint64_t Minus(uint64_t a, uint64_t b) { return a - b; }
-inline uint64_t LeftShift(uint64_t a, int s) { return a << s; }
-inline uint64_t RightShift32(uint64_t a) { return a >> 32; }
+// inline uint64_t Xor(uint64_t a, uint64_t b) { return a ^ b; }
+// inline uint64_t Plus(uint64_t a, uint64_t b) { return a + b; }
+// inline uint64_t Minus(uint64_t a, uint64_t b) { return a - b; }
+// inline uint64_t LeftShift(uint64_t a, int s) { return a << s; }
+// inline uint64_t RightShift32(uint64_t a) { return a >> 32; }
+
 inline uint64_t Sum(uint64_t a) { return a; }
-inline uint64_t Negate(uint64_t a) { return -a; }
+
+// inline uint64_t Negate(uint64_t a) { return -a; }
 
 inline uint64_t Plus32(uint64_t a, uint64_t b) {
   uint64_t result;
@@ -120,23 +129,18 @@ inline uint64_t Plus32(uint64_t a, uint64_t b) {
   return result;
 }
 
-inline uint64_t Times(uint64_t a, uint64_t b) {
+inline uint64_t Times32(uint64_t a, uint64_t b) {
   constexpr uint64_t mask = (1ul << 32) - 1;
   return (a & mask) * (b & mask);
 }
 
-struct BlockWrapperScalar {
-  using Block = uint64_t;
-
-  static uint64_t LoadBlock(const void* x) {
-    auto y = reinterpret_cast<const char*>(x);
-    uint64_t result;
-    memcpy(&result, y, sizeof(uint64_t));
-    return result;
-  }
-
-  static uint64_t LoadOne(uint64_t entropy) { return entropy; }
-};
+template <>
+uint64_t LoadPointer<uint64_t>(const void* x) {
+  auto y = reinterpret_cast<const char*>(x);
+  uint64_t result;
+  memcpy(&result, y, sizeof(uint64_t));
+  return result;
+}
 
 template <typename Block>
 inline void Encode3(Block raw_io[9 * 3]) {
@@ -152,7 +156,7 @@ inline void Encode3(Block raw_io[9 * 3]) {
   auto DistributeRaw = [io, iter](unsigned slot, unsigned label,
                                   std::initializer_list<unsigned> rest) {
     for (unsigned i : rest) {
-      io[slot][i] = Xor(io[slot][i], iter[label]);
+      io[slot][i] ^= iter[label];
     }
   };
 
@@ -185,7 +189,7 @@ inline void Encode2(Block raw_io[12 * 2]) {
   for (int i = 0; i < 2; ++i) {
     io[11][i] = io[0][i];
     for (int j = 1; j < 11; ++j) {
-      io[11][i] = Xor(io[11][i], io[j][i]);
+      io[11][i] ^= io[j][i];
     }
   }
 }
@@ -206,7 +210,7 @@ inline void Encode4(Block raw_io[10 * 3]) {
   auto DistributeRaw = [io, iter](unsigned slot, unsigned label,
                                   std::initializer_list<unsigned> rest) {
     for (unsigned i : rest) {
-      io[slot][i] = Xor(io[slot][i], iter[label]);
+      io[slot][i] ^= iter[label];
     }
   };
 
@@ -255,13 +259,13 @@ inline void Encode5(Block raw_io[9 * 3]) {
 
   io[7][x] = io[8][x] = iter[y];
   io[7][y] = io[8][y] = iter[z];
-  io[7][z] = io[8][z] = Xor(iter[x], iter[y]);
+  io[7][z] = io[8][z] = iter[x] ^ iter[y];
   iter += 1;
 
   auto DistributeRaw = [io, iter](unsigned slot, unsigned label,
                                   std::initializer_list<unsigned> rest) {
     for (unsigned i : rest) {
-      io[slot][i] = Xor(io[slot][i], iter[label]);
+      io[slot][i] ^= iter[label];
     }
   };
 
@@ -314,21 +318,20 @@ constexpr inline int CeilingLog2(size_t n) {
   return (n <= 1) ? 0 : 1 + CeilingLog2(n / 2 + n % 2);
 }
 
-template <typename BlockWrapper, unsigned dimension, unsigned in_width,
+template <typename Block, unsigned dimension, unsigned in_width,
           unsigned encoded_dimension, unsigned out_width, unsigned fanout = 8>
 struct EhcBadger {
-  using Block = typename BlockWrapper::Block;
   static_assert(alignof(Block) == sizeof(Block), "alignof(Block) == sizeof(Block)");
 
   static Block Mix(Block input, Block entropy) {
     Block output = Plus32(entropy, input);
-    Block twin = RightShift32(output);
-    output = Times(output, twin);
+    Block twin = output >> 32;
+    output = Times32(output, twin);
     return output;
   }
 
   static Block MixOne(Block input, uint64_t entropy) {
-    return Mix(input, BlockWrapper::LoadOne(entropy));
+    return Mix(input, Block(entropy));
   }
 
   static void EhcUpperLayer(const Block (&input)[fanout][out_width],
@@ -337,8 +340,7 @@ struct EhcBadger {
     for (unsigned i = 0; i < out_width; ++i) {
       output[i] = input[0][i];
       for (unsigned j = 1; j < fanout; ++j) {
-        output[i] =
-            Plus(output[i], MixOne(input[j][i], entropy[(fanout - 1) * i + j - 1]));
+        output[i] += MixOne(input[j][i], entropy[(fanout - 1) * i + j - 1]);
       }
     }
   }
@@ -351,28 +353,22 @@ struct EhcBadger {
     if (out_width == 5) return Encode5<Block>(&io[0][0]);
   }
 
-  static Block SimpleTimes(std::integral_constant<int, -1>, Block x) { return Negate(x); }
+  static Block SimpleTimes(std::integral_constant<int, -1>, Block x) { return -x; }
   static Block SimpleTimes(std::integral_constant<int, 1>, Block x) { return x; }
-  static Block SimpleTimes(std::integral_constant<int, 2>, Block x) {
-    return LeftShift(x, 1);
-  }
+  static Block SimpleTimes(std::integral_constant<int, 2>, Block x) { return x << 1; }
   static Block SimpleTimes(std::integral_constant<int, 3>, Block x) {
-    return Plus(x, LeftShift(x, 1));
+    return x + (x << 1);
   }
-  static Block SimpleTimes(std::integral_constant<int, 4>, Block x) {
-    return LeftShift(x, 2);
-  }
+  static Block SimpleTimes(std::integral_constant<int, 4>, Block x) { return x << 2; }
   static Block SimpleTimes(std::integral_constant<int, 5>, Block x) {
-    return Plus(x, LeftShift(x, 2));
+    return x + (x << 2);
   }
   static Block SimpleTimes(std::integral_constant<int, 7>, Block x) {
-    return Minus(LeftShift(x, 3), x);
+    return (x << 3) - x;
   }
-  static Block SimpleTimes(std::integral_constant<int, 8>, Block x) {
-    return LeftShift(x, 3);
-  }
+  static Block SimpleTimes(std::integral_constant<int, 8>, Block x) { return x << 3; }
   static Block SimpleTimes(std::integral_constant<int, 9>, Block x) {
-    return Plus(x, LeftShift(x, 3));
+    return x + (x << 3);
   }
 
   template <int a>
@@ -382,26 +378,26 @@ struct EhcBadger {
 
   template <int a, int b>
   static void Dot2(Block sinks[2], Block x) {
-    sinks[0] = Plus(sinks[0], SimplerTimes<a>(x));
-    sinks[1] = Plus(sinks[1], SimplerTimes<b>(x));
+    sinks[0] +=  SimplerTimes<a>(x);
+    sinks[1] += SimplerTimes<b>(x);
   }
 
   template <int a, int b, int c>
   static void Dot3(Block sinks[3], Block x) {
     Dot2<a, b>(sinks, x);
-    sinks[2] = Plus(sinks[2], SimplerTimes<c>(x));
+    sinks[2] += SimplerTimes<c>(x);
   }
 
   template <int a, int b, int c, int d>
   static void Dot4(Block sinks[4], Block x) {
     Dot3<a, b, c>(sinks, x);
-    sinks[3] = Plus(sinks[3], SimplerTimes<d>(x));
+    sinks[3] += SimplerTimes<d>(x);
   }
 
   template <int a, int b, int c, int d, int e>
   static void Dot5(Block sinks[5], Block x) {
     Dot4<a, b, c, d>(sinks, x);
-    sinks[4] = Plus(sinks[4], SimplerTimes<e>(x));
+    sinks[4] += SimplerTimes<e>(x);
   }
 
   static void Combine(const Block input[encoded_dimension], Block (&output)[out_width]) {
@@ -426,8 +422,7 @@ struct EhcBadger {
 #pragma unroll
 #endif
       for (unsigned j = 0; j < in_width; ++j) {
-        output[i][j] =
-            BlockWrapper::LoadBlock(&input[(i * in_width + j) * sizeof(Block)]);
+        output[i][j] = LoadPointer<Block>(&input[(i * in_width + j) * sizeof(Block)]);
       }
     }
   }
@@ -447,7 +442,7 @@ struct EhcBadger {
       // b = &entropy[j];
       for (unsigned i = 0; i < encoded_dimension; ++i) {
         // TODO: reduce entropy index here
-        output[i] = Plus(output[i], MixOne(input[i][j], entropy[i][j]));
+        output[i] += MixOne(input[i][j], entropy[i][j]);
         // a += in_width;
         // TODO: this might be optional; it might not matter which way we iterate over
         // entropy
@@ -511,16 +506,15 @@ struct EhcBadger {
 
     void Insert(const Block (&x)[out_width]) {
       for (unsigned i = 0; i < out_width; ++i) {
-        accum[i] = Plus(accum[i], Mix(x[i], BlockWrapper::LoadBlock(seeds)));
+        accum[i] += Mix(x[i], LoadPointer<Block>(seeds));
         seeds += sizeof(Block) / sizeof(uint64_t);
       }
     }
 
     void Insert(Block x) {
       for (unsigned i = 0; i < out_width; ++i) {
-        accum[i] =
-            Plus(accum[i], Mix(x, BlockWrapper::LoadBlock(
-                                      &seeds[i * sizeof(Block) / sizeof(uint64_t)])));
+        accum[i] += accum[i],
+            Mix(x, LoadPointer<Block>(&seeds[i * sizeof(Block) / sizeof(uint64_t)]));
       }
       // Toeplitz
       seeds += sizeof(Block) / sizeof(uint64_t);
@@ -546,11 +540,11 @@ struct EhcBadger {
 
     size_t i = 0;
     for (; i + sizeof(Block) <= char_length; i += sizeof(Block)) {
-      b.Insert(BlockWrapper::LoadBlock(&char_input[i]));
+      b.Insert(LoadPointer<Block>(&char_input[i]));
     }
 
     if (1) {
-      Block extra = {};
+      Block extra = Block();
       memcpy(&extra, &char_input[i], char_length - i);
       b.Insert(extra);
     } else {
@@ -596,20 +590,20 @@ inline void Combine3(const Block input[9], Block output[3]) {
   output[1] = input[0];
   output[2] = input[0];
 
-  output[1] = Plus(output[1], input[1]);
-  output[2] = Plus(output[2], LeftShift(input[1], 2));
+  output[1] += input[1];
+  output[2] += input[1] << 2;
 
   output[0] = input[2];
-  output[2] = Plus(output[2], input[2]);
+  output[2] += input[2];
 
-  output[0] = Plus(output[0], LeftShift(input[3], 2));
-  output[2] = Plus(output[2], input[3]);
+  output[0] += input[3] << 2;
+  output[2] += input[3];
 
-  output[0] = Plus(output[0], input[4]);
-  output[1] = Plus(output[1], input[4]);
+  output[0] += input[4];
+  output[1] += input[4];
 
-  output[0] = Plus(output[0], input[5]);
-  output[1] = Plus(output[1], LeftShift(input[5], 2));
+  output[0] += input[5];
+  output[1] += input[5] << 2;
 
   Badger::template Dot3<2, 1, 2>(output, input[6]);
   Badger::template Dot3<2, 2, 1>(output, input[7]);
@@ -709,23 +703,23 @@ inline void Combine2(const Block input[12], Block output[2]) {
 
 template <typename Badger, typename Block>
 inline void Combine4(const Block input[10], Block output[4]) {
-  output[2] = LeftShift(input[0], 1);
+  output[2] = input[0] << 1;
   output[3] = input[0];
 
   output[1] = input[1];
-  output[3] = Plus(output[3], input[1]);
+  output[3] += input[1];
 
-  output[1] = Plus(output[1], LeftShift(input[2], 1));
-  output[2] = Plus(output[2], input[2]);
+  output[1] += input[2] << 1;
+  output[2] += input[2];
 
   output[0] = input[3];
-  output[3] = Plus(output[3], input[3]);
+  output[3] += input[3];
 
-  output[0] = Plus(output[0], input[4]);
-  output[2] = Plus(output[2], LeftShift(input[4], 2));
+  output[0] += input[4];
+  output[2] += input[4] << 2;
 
-  output[0] = Plus(output[0], LeftShift(input[5], 2));
-  output[1] = Plus(output[1], input[5]);
+  output[0] += input[5] << 2;
+  output[1] += input[5];
 
   Badger::template Dot4<2, 1, 1, 4>(output, input[6]);
   Badger::template Dot4<4, 2, 1, 1>(output, input[7]);
@@ -776,11 +770,11 @@ inline void Combine5(const Block input[10], Block output[5]) {
   output[3] = input[3];
   output[4] = input[4];
 
-  output[0] = Plus(output[0], input[5]);
-  output[1] = Plus(output[1], input[5]);
-  output[2] = Plus(output[2], input[5]);
-  output[3] = Plus(output[3], input[5]);
-  output[4] = Plus(output[4], input[5]);
+  output[0] += input[5];
+  output[1] += input[5];
+  output[2] += input[5];
+  output[3] += input[5];
+  output[4] += input[5];
 
   Badger::template Dot5<1, 2, 3, 4, 5>(output, input[6]);
   Badger::template Dot5<2, 1, 8, 9, 3>(output, input[7]);
@@ -799,160 +793,157 @@ inline uint64_t TabulateBytes(uint64_t input, const uint64_t entropy[256 * width
   return result;
 }
 
-template <typename BlockWrapper, unsigned dimension, unsigned in_width,
+template <typename Block, unsigned dimension, unsigned in_width,
           unsigned encoded_dimension, unsigned out_width>
 void Hash(const uint64_t* entropy, const char* char_input, size_t length,
           uint64_t output[out_width]) {
   constexpr unsigned kMaxStackSize = 9;
   constexpr unsigned kFanout = 8;
 
-  using Block = typename BlockWrapper::Block;
-
   Block stack[kMaxStackSize][kFanout][out_width];
   int stack_lengths[kMaxStackSize] = {};
   size_t wide_length = length / sizeof(Block) / (dimension * in_width);
 
-  EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension, out_width,
+  EhcBadger<Block, dimension, in_width, encoded_dimension, out_width,
             kFanout>::DfsTreeHash(char_input, wide_length, stack, stack_lengths, entropy);
   entropy += encoded_dimension * in_width + out_width * (kFanout - 1) * kMaxStackSize;
 
   auto used_chars = wide_length * sizeof(Block) * (dimension * in_width);
   char_input += used_chars;
 
-  EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension, out_width,
+  EhcBadger<Block, dimension, in_width, encoded_dimension, out_width,
             kFanout>::DfsGreedyFinalizer(stack, stack_lengths, char_input,
                                          length - used_chars, entropy, output);
 }
 
-template <typename Block, unsigned count>
-struct alignas(sizeof(Block) * count) Repeat {
-  static_assert(sizeof(Block) == alignof(Block), "sizeof(Block) == alignof(Block)");
-  Block it[count];
+// template <typename Block, unsigned count>
+// struct alignas(sizeof(Block) * count) Repeat {
+//   static_assert(sizeof(Block) == alignof(Block), "sizeof(Block) == alignof(Block)");
+//   Block it[count];
 
-  Repeat operator*(long x) const {
-    Repeat result;
-    for (unsigned i = 0; i < count; ++i) {
-      result.it[i] = it[i] * x;
-    }
-    return result;
-  }
-};
+//   Repeat operator*(long x) const {
+//     Repeat result;
+//     for (unsigned i = 0; i < count; ++i) {
+//       result.it[i] = it[i] * x;
+//     }
+//     return result;
+//   }
+// };
 
-template <typename Block, unsigned count>
-inline Repeat<Block, count> operator*(long x, Repeat<Block, count> here) {
-  Repeat<Block, count> result;
-  for (unsigned i = 0; i < count; ++i) {
-    result.it[i] = here.it[i] * x;
-  }
-  return result;
-}
+// template <typename Block, unsigned count>
+// inline Repeat<Block, count> operator*(long x, Repeat<Block, count> here) {
+//   Repeat<Block, count> result;
+//   for (unsigned i = 0; i < count; ++i) {
+//     result.it[i] = here.it[i] * x;
+//   }
+//   return result;
+// }
 
-template <typename InnerBlockWrapper, unsigned count>
-struct RepeatWrapper {
-  using InnerBlock = typename InnerBlockWrapper::Block;
-  static_assert(sizeof(InnerBlock) == alignof(InnerBlock),
-                "sizeof(InnerBlock) == alignof(InnerBlock)");
+// template <typename InnerBlock, unsigned count>
+// struct RepeatWrapper {
+//   static_assert(sizeof(InnerBlock) == alignof(InnerBlock),
+//                 "sizeof(InnerBlock) == alignof(InnerBlock)");
 
-  using Block = Repeat<InnerBlock, count>;
+//   using Block = Repeat<InnerBlock, count>;
 
-  static Block LoadOne(uint64_t entropy) {
-    Block result;
-    for (unsigned i = 0; i < count; ++i) {
-      result.it[i] = InnerBlockWrapper::LoadOne(entropy);
-    }
-    return result;
-  }
+//   static Block LoadOne(uint64_t entropy) {
+//     Block result;
+//     for (unsigned i = 0; i < count; ++i) {
+//       result.it[i] = InnerBlock(entropy);
+//     }
+//     return result;
+//   }
 
-  static Block LoadBlock(const void* x) {
-    auto y = reinterpret_cast<const char*>(x);
-    Block result;
-    for (unsigned i = 0; i < count; ++i) {
-      result.it[i] = InnerBlockWrapper::LoadBlock(y + i * sizeof(InnerBlock));
-    }
-    return result;
-  }
-};
+//   static Block LoadBlock(const void* x) {
+//     auto y = reinterpret_cast<const char*>(x);
+//     Block result;
+//     for (unsigned i = 0; i < count; ++i) {
+//       result.it[i] = InnerBlock(y + i * sizeof(InnerBlock));
+//     }
+//     return result;
+//   }
+// };
 
-template <typename Block, unsigned count>
-inline Repeat<Block, count> Xor(Repeat<Block, count> a, Repeat<Block, count> b) {
-  Repeat<Block, count> result;
-  for (unsigned i = 0; i < count; ++i) {
-    result.it[i] = Xor(a.it[i], b.it[i]);
-  }
-  return result;
-}
+// template <typename Block, unsigned count>
+// inline Repeat<Block, count> Xor(Repeat<Block, count> a, Repeat<Block, count> b) {
+//   Repeat<Block, count> result;
+//   for (unsigned i = 0; i < count; ++i) {
+//     result.it[i] = Xor(a.it[i], b.it[i]);
+//   }
+//   return result;
+// }
 
-template <typename Block, unsigned count>
-inline Repeat<Block, count> Plus32(Repeat<Block, count> a, Repeat<Block, count> b) {
-  Repeat<Block, count> result;
-  for (unsigned i = 0; i < count; ++i) {
-    result.it[i] = Plus32(a.it[i], b.it[i]);
-  }
-  return result;
-}
+// template <typename Block, unsigned count>
+// inline Repeat<Block, count> Plus32(Repeat<Block, count> a, Repeat<Block, count> b) {
+//   Repeat<Block, count> result;
+//   for (unsigned i = 0; i < count; ++i) {
+//     result.it[i] = Plus32(a.it[i], b.it[i]);
+//   }
+//   return result;
+// }
 
-template <typename Block, unsigned count>
-inline Repeat<Block, count> Plus(Repeat<Block, count> a, Repeat<Block, count> b) {
-  Repeat<Block, count> result;
-  for (unsigned i = 0; i < count; ++i) {
-    result.it[i] = Plus(a.it[i], b.it[i]);
-  }
-  return result;
-}
+// template <typename Block, unsigned count>
+// inline Repeat<Block, count> Plus(Repeat<Block, count> a, Repeat<Block, count> b) {
+//   Repeat<Block, count> result;
+//   for (unsigned i = 0; i < count; ++i) {
+//     result.it[i] = Plus(a.it[i], b.it[i]);
+//   }
+//   return result;
+// }
 
-template <typename Block, unsigned count>
-inline Repeat<Block, count> Minus(Repeat<Block, count> a, Repeat<Block, count> b) {
-  Repeat<Block, count> result;
-  for (unsigned i = 0; i < count; ++i) {
-    result.it[i] = Minus(a.it[i], b.it[i]);
-  }
-  return result;
-}
+// template <typename Block, unsigned count>
+// inline Repeat<Block, count> Minus(Repeat<Block, count> a, Repeat<Block, count> b) {
+//   Repeat<Block, count> result;
+//   for (unsigned i = 0; i < count; ++i) {
+//     result.it[i] = Minus(a.it[i], b.it[i]);
+//   }
+//   return result;
+// }
 
-template <typename Block, unsigned count>
-inline Repeat<Block, count> LeftShift(Repeat<Block, count> a, int s) {
-  Repeat<Block, count> result;
-  for (unsigned i = 0; i < count; ++i) {
-    result.it[i] = LeftShift(a.it[i], s);
-  }
-  return result;
-}
+// template <typename Block, unsigned count>
+// inline Repeat<Block, count> LeftShift(Repeat<Block, count> a, int s) {
+//   Repeat<Block, count> result;
+//   for (unsigned i = 0; i < count; ++i) {
+//     result.it[i] = LeftShift(a.it[i], s);
+//   }
+//   return result;
+// }
 
-template <typename Block, unsigned count>
-inline Repeat<Block, count> RightShift32(Repeat<Block, count> a) {
-  Repeat<Block, count> result;
-  for (unsigned i = 0; i < count; ++i) {
-    result.it[i] = RightShift32(a.it[i]);
-  }
-  return result;
-}
+// template <typename Block, unsigned count>
+// inline Repeat<Block, count> RightShift32(Repeat<Block, count> a) {
+//   Repeat<Block, count> result;
+//   for (unsigned i = 0; i < count; ++i) {
+//     result.it[i] = RightShift32(a.it[i]);
+//   }
+//   return result;
+// }
 
-template <typename Block, unsigned count>
-inline Repeat<Block, count> Times(Repeat<Block, count> a, Repeat<Block, count> b) {
-  Repeat<Block, count> result;
-  for (unsigned i = 0; i < count; ++i) {
-    result.it[i] = Times(a.it[i], b.it[i]);
-  }
-  return result;
-}
+// template <typename Block, unsigned count>
+// inline Repeat<Block, count> Times(Repeat<Block, count> a, Repeat<Block, count> b) {
+//   Repeat<Block, count> result;
+//   for (unsigned i = 0; i < count; ++i) {
+//     result.it[i] = Times(a.it[i], b.it[i]);
+//   }
+//   return result;
+// }
 
-template <typename Block, unsigned count>
-inline uint64_t Sum(Repeat<Block, count> a) {
-  uint64_t result = 0;
-  for (unsigned i = 0; i < count; ++i) {
-    result += Sum(a.it[i]);
-  }
-  return result;
-}
+// template <typename Block, unsigned count>
+// inline uint64_t Sum(Repeat<Block, count> a) {
+//   uint64_t result = 0;
+//   for (unsigned i = 0; i < count; ++i) {
+//     result += Sum(a.it[i]);
+//   }
+//   return result;
+// }
 
-template <typename Block, unsigned count>
-inline Repeat<Block, count> Negate(Repeat<Block, count> a) {
-  Repeat<Block, count> b;
-  for (unsigned i = 0; i < count; ++i) {
-    b.it[i] = Negate(a.it[i]);
-  }
-  return b;
-}
+// template <typename Block, unsigned count>
+// inline Repeat<Block, count> Negate(Repeat<Block, count> a) {
+//   Repeat<Block, count> b;
+//   for (unsigned i = 0; i < count; ++i) {
+//     b.it[i] = Negate(a.it[i]);
+//   }
+//   return b;
+// }
 
 }  // namespace
 
@@ -995,13 +986,13 @@ inline void V3Avx2(const uint64_t* entropy, const char* char_input, size_t lengt
       entropy, char_input, length, output);
 }
 
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V4Avx2(const uint64_t* entropy, const char* char_input, size_t length,
-                   uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapper256, 2>, dimension, in_width, encoded_dimension,
-              out_width>(entropy, char_input, length, output);
-}
+// template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
+//           unsigned out_width>
+// inline void V4Avx2(const uint64_t* entropy, const char* char_input, size_t length,
+//                    uint64_t output[out_width]) {
+//   return Hash<RepeatWrapper<BlockWrapper256, 2>, dimension, in_width, encoded_dimension,
+//               out_width>(entropy, char_input, length, output);
+// }
 
 #endif
 
@@ -1011,65 +1002,65 @@ template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
           unsigned out_width>
 inline void V2Sse2(const uint64_t* entropy, const char* char_input, size_t length,
                    uint64_t output[out_width]) {
-  return Hash<BlockWrapper128, dimension, in_width, encoded_dimension, out_width>(
+  return Hash<u128, dimension, in_width, encoded_dimension, out_width>(
       entropy, char_input, length, output);
 }
 
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V3Sse2(const uint64_t* entropy, const char* char_input, size_t length,
-                   uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapper128, 2>, dimension, in_width, encoded_dimension,
-              out_width>(entropy, char_input, length, output);
-}
+// template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
+//           unsigned out_width>
+// inline void V3Sse2(const uint64_t* entropy, const char* char_input, size_t length,
+//                    uint64_t output[out_width]) {
+//   return Hash<RepeatWrapper<u128, 2>, dimension, in_width, encoded_dimension,
+//               out_width>(entropy, char_input, length, output);
+// }
 
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V4Sse2(const uint64_t* entropy, const char* char_input, size_t length,
-                   uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapper128, 4>, dimension, in_width, encoded_dimension,
-              out_width>(entropy, char_input, length, output);
-}
+// template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
+//           unsigned out_width>
+// inline void V4Sse2(const uint64_t* entropy, const char* char_input, size_t length,
+//                    uint64_t output[out_width]) {
+//   return Hash<RepeatWrapper<u128, 4>, dimension, in_width, encoded_dimension,
+//               out_width>(entropy, char_input, length, output);
+// }
 
 #endif
 
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V4Scalar(const uint64_t* entropy, const char* char_input, size_t length,
-                     uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapperScalar, 8>, dimension, in_width,
-              encoded_dimension, out_width>(entropy, char_input, length, output);
-}
+// template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
+//           unsigned out_width>
+// inline void V4Scalar(const uint64_t* entropy, const char* char_input, size_t length,
+//                      uint64_t output[out_width]) {
+//   return Hash<RepeatWrapper<BlockWrapperScalar, 8>, dimension, in_width,
+//               encoded_dimension, out_width>(entropy, char_input, length, output);
+// }
 
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V3Scalar(const uint64_t* entropy, const char* char_input, size_t length,
-                     uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapperScalar, 4>, dimension, in_width,
-              encoded_dimension, out_width>(entropy, char_input, length, output);
-}
+// template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
+//           unsigned out_width>
+// inline void V3Scalar(const uint64_t* entropy, const char* char_input, size_t length,
+//                      uint64_t output[out_width]) {
+//   return Hash<RepeatWrapper<BlockWrapperScalar, 4>, dimension, in_width,
+//               encoded_dimension, out_width>(entropy, char_input, length, output);
+// }
 
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V2Scalar(const uint64_t* entropy, const char* char_input, size_t length,
-                     uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapperScalar, 2>, dimension, in_width,
-              encoded_dimension, out_width>(entropy, char_input, length, output);
-}
+// template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
+//           unsigned out_width>
+// inline void V2Scalar(const uint64_t* entropy, const char* char_input, size_t length,
+//                      uint64_t output[out_width]) {
+//   return Hash<RepeatWrapper<BlockWrapperScalar, 2>, dimension, in_width,
+//               encoded_dimension, out_width>(entropy, char_input, length, output);
+// }
 
 template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
           unsigned out_width>
 inline void V1Scalar(const uint64_t* entropy, const char* char_input, size_t length,
                      uint64_t output[out_width]) {
-  return Hash<BlockWrapperScalar, dimension, in_width, encoded_dimension, out_width>(
+  return Hash<uint64_t, dimension, in_width, encoded_dimension, out_width>(
       entropy, char_input, length, output);
 }
 
 template <unsigned out_width>
 inline constexpr size_t GetEntropyBytesNeeded(size_t n) {
   return (3 == out_width)
-             ? EhcBadger<BlockWrapperScalar, 7, 3, 9, out_width>::GetEntropyBytesNeeded(n)
-             : EhcBadger<BlockWrapperScalar, 11, 2, 12, out_width>::GetEntropyBytesNeeded(
+             ? EhcBadger<uint64_t, 7, 3, 9, out_width>::GetEntropyBytesNeeded(n)
+             : EhcBadger<uint64_t, 11, 2, 12, out_width>::GetEntropyBytesNeeded(
                    n);
 }
 
@@ -1140,55 +1131,55 @@ inline void V4<2>(const uint64_t* entropy, const char* char_input, size_t length
 
 #elif __SSE2__
 
-template <>
-inline void V4<5>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[5]) {
-  return V4Sse2<5, 3, 9, 5>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V4<5>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[5]) {
+//   return V4Sse2<5, 3, 9, 5>(entropy, char_input, length, output);
+// }
 
-template <>
-inline void V4<4>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[4]) {
-  return V4Sse2<7, 3, 10, 4>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V4<4>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[4]) {
+//   return V4Sse2<7, 3, 10, 4>(entropy, char_input, length, output);
+// }
 
-template <>
-inline void V4<3>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[3]) {
-  return V4Sse2<7, 3, 9, 3>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V4<3>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[3]) {
+//   return V4Sse2<7, 3, 9, 3>(entropy, char_input, length, output);
+// }
 
-template <>
-inline void V4<2>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[2]) {
-  return V4Sse2<11, 2, 12, 2>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V4<2>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[2]) {
+//   return V4Sse2<11, 2, 12, 2>(entropy, char_input, length, output);
+// }
 
 #else
 
-template <>
-inline void V4<5>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[5]) {
-  return V4Scalar<5, 3, 9, 5>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V4<5>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[5]) {
+//   return V4Scalar<5, 3, 9, 5>(entropy, char_input, length, output);
+// }
 
-template <>
-inline void V4<4>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[4]) {
-  return V4Scalar<7, 3, 10, 4>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V4<4>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[4]) {
+//   return V4Scalar<7, 3, 10, 4>(entropy, char_input, length, output);
+// }
 
-template <>
-inline void V4<3>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[3]) {
-  return V4Scalar<7, 3, 9, 3>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V4<3>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[3]) {
+//   return V4Scalar<7, 3, 9, 3>(entropy, char_input, length, output);
+// }
 
-template <>
-inline void V4<2>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[2]) {
-  return V4Scalar<11, 2, 12, 2>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V4<2>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[2]) {
+//   return V4Scalar<11, 2, 12, 2>(entropy, char_input, length, output);
+// }
 
 #endif
 
@@ -1220,55 +1211,55 @@ inline void V3<2>(const uint64_t* entropy, const char* char_input, size_t length
 
 #elif __SSE2__
 
-template <>
-inline void V3<5>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[5]) {
-  return V3Sse2<5, 3, 9, 5>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V3<5>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[5]) {
+//   return V3Sse2<5, 3, 9, 5>(entropy, char_input, length, output);
+// }
 
-template <>
-inline void V3<4>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[4]) {
-  return V3Sse2<7, 3, 10, 4>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V3<4>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[4]) {
+//   return V3Sse2<7, 3, 10, 4>(entropy, char_input, length, output);
+// }
 
-template <>
-inline void V3<3>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[3]) {
-  return V3Sse2<7, 3, 9, 3>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V3<3>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[3]) {
+//   return V3Sse2<7, 3, 9, 3>(entropy, char_input, length, output);
+// }
 
-template <>
-inline void V3<2>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[2]) {
-  return V3Sse2<11, 2, 12, 2>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V3<2>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[2]) {
+//   return V3Sse2<11, 2, 12, 2>(entropy, char_input, length, output);
+// }
 
 #else
 
-template <>
-inline void V3<5>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[5]) {
-  return V3Scalar<5, 3, 9, 5>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V3<5>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[5]) {
+//   return V3Scalar<5, 3, 9, 5>(entropy, char_input, length, output);
+// }
 
-template <>
-inline void V3<4>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[4]) {
-  return V3Scalar<7, 3, 10, 4>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V3<4>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[4]) {
+//   return V3Scalar<7, 3, 10, 4>(entropy, char_input, length, output);
+// }
 
-template <>
-inline void V3<3>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[3]) {
-  return V3Scalar<7, 3, 9, 3>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V3<3>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[3]) {
+//   return V3Scalar<7, 3, 9, 3>(entropy, char_input, length, output);
+// }
 
-template <>
-inline void V3<2>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[2]) {
-  return V3Scalar<11, 2, 12, 2>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V3<2>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[2]) {
+//   return V3Scalar<11, 2, 12, 2>(entropy, char_input, length, output);
+// }
 
 #endif
 
@@ -1300,29 +1291,29 @@ inline void V2<2>(const uint64_t* entropy, const char* char_input, size_t length
 
 #else
 
-template <>
-inline void V2<5>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[5]) {
-  return V2Scalar<5, 3, 9, 5>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V2<5>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[5]) {
+//   return V2Scalar<5, 3, 9, 5>(entropy, char_input, length, output);
+// }
 
-template <>
-inline void V2<4>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[4]) {
-  return V2Scalar<7, 3, 10, 4>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V2<4>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[4]) {
+//   return V2Scalar<7, 3, 10, 4>(entropy, char_input, length, output);
+// }
 
-template <>
-inline void V2<3>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[3]) {
-  return V2Scalar<7, 3, 9, 3>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V2<3>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[3]) {
+//   return V2Scalar<7, 3, 9, 3>(entropy, char_input, length, output);
+// }
 
-template <>
-inline void V2<2>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[2]) {
-  return V2Scalar<11, 2, 12, 2>(entropy, char_input, length, output);
-}
+// template <>
+// inline void V2<2>(const uint64_t* entropy, const char* char_input, size_t length,
+//                   uint64_t output[2]) {
+//   return V2Scalar<11, 2, 12, 2>(entropy, char_input, length, output);
+// }
 
 #endif
 
