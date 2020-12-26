@@ -30,6 +30,7 @@ export COMMIT=$(git rev-parse --short HEAD) &&
 export CC=clang-11 &&
 export CXX=clang++-11 &&
 git checkout scratch &&
+git submodule update --init --recursive &&
 make -k -j$(nproc) benchmark.exe >/dev/null &&
 date &&
 ./benchmark.exe 1 10000000 >>$INSTANCE_TYPE-$CC-$COMMIT.txt &&
