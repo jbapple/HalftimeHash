@@ -287,19 +287,15 @@ The x86-64 ISA extensions SSE2, AVX2, and AVX-512F all contain instruction to si
 Aarch64 has similar instructions in the NEON set.
 % The POWER ISA also contains this, but only on 128 bits at once?
 
-%The code above is the key code needed to operate on 512-bit vectors in AVX-512. Similar code needs to be present for chips with more limited ISAs.
+%% HalftimeHash uses both NH as described above and a weakened version of NH:
 
-%We also include code that should work on all implementations of C++11, even those with no SIMD.
+%% \[
+%% d_0 + 2^{32} d1 + \sum_{i=1}^m (d_{2i} + s_{2i})(d_{2i+1} + s_{2i+1})
+%% \]
 
-HalftimeHash uses both NH as described above and a weakened version of NH:
-
-\[
-d_0 + 2^{32} d1 + \sum_{i=1}^m (d_{2i} + s_{2i})(d_{2i+1} + s_{2i+1})
-\]
-
-This version is still $2^{-32}$-AU, but it loses a condition called {\em$ \varepsilon$-almost $\Delta$-universal} ($\varepsilon$-A$\Delta$U).
-A$\Delta$U is strictly stronger then AU, but is not needed in every part of HalftimeHash.
-Section \ref{analysis} discusses this in more detail.
+%% This version is still $2^{-32}$-AU, but it loses a condition called {\em$ \varepsilon$-almost $\Delta$-universal} ($\varepsilon$-A$\Delta$U).
+%% A$\Delta$U is strictly stronger then AU, but is not needed in every part of HalftimeHash.
+%% Section \ref{analysis} discusses this in more detail.
 
 %The default is 8, saving $12.5\%$ of the erstwhile $n/8 \pm O(1)$ multiplications to hash strings of length $n$.
 
@@ -529,7 +525,7 @@ In addition to the data on the stack, there are some characters that have yet to
 HalftimeHash uses three NH hash applications to complete the operation.
 First, it feeds every hash value in the three stacks to the corresponding NH execution.
 Second, it feeds every character in the remainder of the input string into {\em all three} NH executions.
-For both, HalftimeHash uses the A$\Delta$U version of NH.
+%% For both, HalftimeHash uses the A$\Delta$U version of NH.
 
 HalftimeHash then returns the three NH sums, for a total of 24 bytes of output.
 This output is only AU, so users will likely want to rehash it (along with the input length) with a hash family with guarantees stronger than almost universality, such as tabulation hashing or SipHash. \cite{tabulation,siphash}
@@ -649,7 +645,7 @@ As for collision probability, Nandi proved that in an environment in which the E
 $\ints_{2^{64}}$ is not a finite field, but the structure of this proof that EHC in HalftimeHash is AU is similar to the structure of Nandi's proof, so a variant of that is presented here first.  \cite{ehc-nandi}
 
 \begin{lemma}
-  In EHC, when the matrix is over a field and the hash function used in step 2 is $\varepsilon$-AU, EHC is $\varepsilon^k$-AU.
+  In EHC, when the matrix is over a field and the hash function used in step 2 is $\varepsilon$-A$\Delta$U, EHC is $\varepsilon^k$-A$\Delta$U.
 \end{lemma}
 \begin{proof}
   Let $H$ be the hash family used in step 2 of EHC, and let $\bar{H}$ be defined as $\bar{H}(s, x)_i = H(s_i, x_i)$.
@@ -659,20 +655,24 @@ $\ints_{2^{64}}$ is not a finite field, but the structure of this proof that EHC
   We want to bound
   \begin{equation}
     \label{ehc-delta}
-    \Pr_s[T|_F \bar{H}|_F(s, g(x)) = T|_F \bar{H}|_F(s, g(y))]
+    \max_\delta \Pr_s[T|_F \bar{H}|_F(s, g(x)) - T|_F \bar{H}|_F(s, g(y)) = \delta]
   \end{equation}
   where $H$ is the hash function used in step 2 of EHC.
 
-  Since any $k$ columns of $T$ are independent, $T|_F$ is non-singular, and the equation is equivalent to $\hat{H}|_F(s, g(x)) = \hat{H}|_F(s, g(y))$, which implies
+  Since any $k$ columns of $T$ are independent, $T|_F$ is non-singular, and the equation is equivalent to $\hat{H}|_F(s, g(x)) - \hat{H}|_F(s, g(y)) = {T|_F}^{-1} \delta$, which implies
   \[
-  \bigwedge_{i \in F} H(s_i, g(x)_i) = H(s_i, g(y)_i)
+  \bigwedge_{i \in F} H(s_i, g(x)_i) - H(s_i, g(y)_i) = \beta_i
   \]
+  where $\beta \triangleq {T|_F}^{-1} \delta$.
 
   Since the $s_i$ are all chosen independently, the probability of the conjunction is the product of the probabilities, showing
   \[
-  \Pr_s[W H(s,g(x)) = W H(s,g(y))] \leq \prod_{i \in F} Pr_s[H(s_i, g(x)_i) = H(s_i, \bar{y}_i)]
+  \begin{array}{rl}
+    & \max_\delta \Pr_s[T|_F \bar{H}|_F (s,g(x)) - T|_F \bar{H}|_F(s,g(y)) = \delta] \\
+  \leq & \max_\beta \prod_{i \in F} Pr_s[H(s_i, g(x)_i) - H(s_i, \bar{y}_i) = \beta_i]
+  \end{array}
   \]
-  and since $H$ is AU, this probability is $\varepsilon^k$.
+  and since $H$ is A$\Delta$U, this probability is $\varepsilon^k$.
 \end{proof}
 
 \begin{theorem}
@@ -690,13 +690,20 @@ $\ints_{2^{64}}$ is not a finite field, but the structure of this proof that EHC
   Now (\ref{ehc-delta}) reduces to
   \[
   \begin{array}{rl}
-    &  \Pr_s[T|_F \bar{H}|_F(s,x) = T|_F \bar{H}|_F(s,y)]\\
-    \leq & \Pr_s[{T|_F}^? T|_F \bar{H}|_F(s,x) = {T|_F}^? T|_F \bar{H}|_F(s,y)] \\
-    = & \Pr_s[q2^p\bar{H}|_F(s,x) = q2^p\bar{H}|_F(s,y)] \\
-    = & \Pr_s[2^p\bar{H}|_F(s,x) = 2^p\bar{H}|_F(s,y)] \\
-    = & \Pr_s[\bar{H}|_F(s,x) \equiv \bar{H}|_F(s,y) \bmod 2^{64-p}] \\
-    = & \Pr_s\left[\bigwedge_{i \in F} H(s_i,x_i) \equiv H(s_i,y_i) \bmod 2^{64-p}\right] \\
-    = & \prod_{i \in F} \Pr_s\left[ H(s_i,x_i) \equiv H(s_i,y_i) \bmod 2^{64-p}\right] \\
+    &  \max_\delta \Pr_s[T|_F \bar{H}|_F(s,x) - T|_F \bar{H}|_F(s,y) = \delta]\\
+    \leq & \max_\delta \Pr_s[{T|_F}^? T|_F \bar{H}|_F(s,x) - {T|_F}^? T|_F \bar{H}|_F(s,y) = {T|_F}^? \delta] \\
+    = & \max_\delta \Pr_s[q2^p\bar{H}|_F(s,x) - q2^p\bar{H}|_F(s,y) = {T|_F}^? \delta] \\
+    = & \max_\delta \Pr_s[2^p\bar{H}|_F(s,x) - 2^p\bar{H}|_F(s,y) = q^{-1} {T|_F}^? \delta]
+  \end{array}
+  \]
+
+  Now letting $\beta = q^{-1} {T|_F}^? \delta$ and letting the modulo operator extend pointwise to vectors, we have
+
+  \[
+  \begin{array}{rl}
+    = & \max_\beta \Pr_s[\bar{H}|_F(s,x) - \bar{H}|_F(s,y) \equiv \beta \bmod 2^{64-p}] \\
+    = & \max_\beta \Pr_s\left[\bigwedge_{i \in F} H(s_i,x_i) - H(s_i,y_i) \equiv \beta \bmod 2^{64-p}\right] \\
+    = & \max_\beta \prod_{i \in F} \Pr_s\left[ H(s_i,x_i) - H(s_i,y_i) \equiv \beta \bmod 2^{64-p}\right] \\
     = & \left(2^p 2^{-32}\right)^{|F|} = 2^{k(p-32)}
   \end{array}
   \]
@@ -719,9 +726,9 @@ For this step we have the following metrics:
 %% \end{tabular}
 \begin{tabular}{|r|l|}
     %% \hline {\bf Step} & {\bf EHC} \\
-    \hline {\bf Multiplications (each)} & $b e (w-1)$ \\
-    \hline {\bf Multiplications (total)} & $b e (w-1) \lfloor n / b d w\rfloor$ \\
-    \hline {\bf In Entropy} & $e (w-1)$ \\
+    \hline {\bf Multiplications (each)} & $b e w$ \\
+    \hline {\bf Multiplications (total)} & $b e w \lfloor n / b d w\rfloor$ \\
+    \hline {\bf In Entropy} & $e w$ \\
     \hline {\bf Out Entropy} & $k (32-p)$\\
     \hline {\bf Output words (total)} & $k b \lfloor n / b d w\rfloor $\\
     \hline
@@ -743,8 +750,8 @@ The tree hash portion of EHC produces $32k - k\lg\left\lfloor\log_f \lfloor n/b 
   A collision occurs for HalftimeHash at the tree hash stage if and only if each tree has a collision, which has probability $\left(\left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor 2^{-32}\right)^k$, assuming that the EHC step didn't already induce a collision.
 \end{proof}
 
-The proof from Carter and Wegman does not need the primitive to be A$\Delta$U.
-As a result, EHC doesn't need to be A$\Delta$U, which means that the NH variant used in it does not need to be A$\Delta$U.
+%% The proof from Carter and Wegman does not need the primitive to be A$\Delta$U.
+%% As a result, EHC doesn't need to be A$\Delta$U, which means that the NH variant used in it does not need to be A$\Delta$U.
 
 The amount of entropy needed is proportional to the height of the tree, with $f$ words needed for every level.
 Here, HalftimeHash uses different seeds for the $k$ different trees to maintain independence of the entropy in the words of the output values, so the total number of 64-bit words of entropy used in the tree hash step is $f k\left\lfloor\log_f \lfloor n/b d w\rfloor\right\rfloor$.
@@ -792,7 +799,7 @@ For the main example described above, with $k=3$, $p=2$, $f=8$, $d = 7$, and $w=
 The combined input entropy needed is
 
 \[
-e (w-1)
+e w
 + (f-1) k \left\lfloor\log_f \lfloor n/b d w\rfloor\right\rfloor
 + b f k \left\lfloor\log_f \lfloor n/b d w\rfloor\right\rfloor
 + b d w + k - 1
@@ -802,7 +809,7 @@ When $b$ is 8, as in the AVX-512 version of HalftimeHash, this is less than 31KB
 6.1KB of this is for hashing the stack.
 This could be reduced by hashing the stacks with unmodified tree hash and hashing the remaining untouched input string with another instantiation of HalftimeHash with smaller block size, but this adds complexity to the algorithm and reduces performance.
 
-The number of multiplications is asymptotically driven by the EHC step, since the total is $(e(w-1) + k) b \lfloor n / b d w \rfloor + O(\log n)$ and $e(w-1)$ is significantly larger than $k$.
+The number of multiplications is asymptotically driven by the EHC step, since the total is $(e w + k) b \lfloor n / b d w \rfloor + O(\log n)$ and $e w$ is significantly larger than $k$.
 
 For a string of length 1MB, 84\% of the multiplications happen in the EHC step. %, and the number of multiplications is about one per ten bytes of input.
 Intel's VTune tool show the same thing: 86\% of the clock cycles are spend in the EHC step.

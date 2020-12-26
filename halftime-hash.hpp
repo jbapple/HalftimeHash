@@ -752,12 +752,21 @@ inline void Combine4(const Block input[10], Block output[4]) {
 //   Badger::template Dot4<-17, 4, 8, 3>(output, input[9]);
 // }
 
+// 0   0   0   0   1   1   5   3   9
+// 1   0   0   0   0   1   1   2   4
+// x   1   0   0   0   0   2   1   7
+// x   x   1   0   0   0   0   8   5
+// x   x   x   1   0   0   0   0   8
+
+
+  
 // evenness: 3 weight: 15
 // 1   0   0   0   0   1   1   2   4
 // 0   1   0   0   0   1   2   1   7
 // 0   0   1   0   0   1   3   8   5
 // 0   0   0   1   0   1   4   9   8
 // 0   0   0   0   1   1   5   3   9
+
 
 template <typename Badger, typename Block>
 inline void Combine5(const Block input[10], Block output[5]) {
