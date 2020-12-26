@@ -3,9 +3,11 @@
 all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe \
 	line-cl-hh24.eps amd-16.eps gcc-local-hh4.eps test-read-each-byte.exe test-read-each-byte.debug-exe no-collisions.exe no-collisions.debug-exe
 
-RELEASE_FLAGS = -ggdb3 -O3 -march=native -Wall -Wextra -Wstrict-aliasing \
+RELEASE_FLAGS = -ggdb3 -O3 -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -DNDEBUG \
 	-Wno-comment -Wno-ignored-attributes -Wno-constant-conversion \
+	-march=armv8.6-a+simd+crc+crypto+sb+predres+fp16+i8mm+bf16 \
+	-flax-vector-conversions
 	# -fsanitize=memory -fsanitize-blacklist=deny-list.txt #-stdlib=libc++
 
 DEBUG_FLAGS = -ggdb3 -O0 -march=native -Wall -Wextra -Wstrict-aliasing \
@@ -24,17 +26,17 @@ export
 %.eps: %.dia Makefile
 	dia -e $@ $<
 
-umash/umash.o: umash/umash.c deny-list.txt Makefile
-	$(CC) $(RELEASE_FLAGS) -o $@ $< -c
+#umash/umash.o: umash/umash.c deny-list.txt Makefile
+#	$(CC) $(RELEASE_FLAGS) -o $@ $< -c
 
-%.exe: %.cc $(shell find -name '*.hpp' ) deny-list.txt umash/umash.o Makefile
-	$(CXX) $(CXX_RELEASE_FLAGS) -o $@ $< umash/umash.o
+%.exe: %.cc $(shell find -name '*.hpp' ) deny-list.txt  Makefile
+	$(CXX) $(CXX_RELEASE_FLAGS) -o $@ $< 
 
-%.exe: %.cpp $(shell find -name '*.hpp' ) deny-list.txt umash/umash.o Makefile
-	$(CXX) $(CXX_RELEASE_FLAGS) -o $@ $< umash/umash.o
+%.exe: %.cpp $(shell find -name '*.hpp' ) deny-list.txt  Makefile
+	$(CXX) $(CXX_RELEASE_FLAGS) -o $@ $< 
 
-%.debug-exe: %.cpp $(shell find -name '*.hpp' ) deny-list.txt umash/umash.o Makefile
-	$(CXX) $(CXX_DEBUG_FLAGS) -o $@ $< umash/umash.o
+%.debug-exe: %.cpp $(shell find -name '*.hpp' ) deny-list.txt  Makefile
+	$(CXX) $(CXX_DEBUG_FLAGS) -o $@ $< 
 
 
 amd-16.eps: plateau-008.txt points-example.txt plot.gnu Makefile
