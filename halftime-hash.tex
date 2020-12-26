@@ -171,6 +171,17 @@ On strings longer than 1KB, HalftimeHash is typically 55\% faster than clhash, t
 It also surpasses the performance of other high-performance string hashing algorithms that don't have AU guarantees such as Fast Positive Hash, falkhash, xxh3, and MeowHash.
 % TODO: graph this perf comparison with other non-universal families
 
+
+\includegraphics[width=8cm]{smhasher-speed.eps}
+\captionof{figure}{
+  \label{smhasher-speed}
+    Some variants of HalftimeHash are faster than the fastest hash functions in the SMhasher suite, even ones that come with no AU guarantees. \protect\cite{smhasher}
+    MeowHash128 and xxh128 produce 128 output bits, all other SMhasher functions produce 64 bits.
+    HalftimeHash24 produces 192 output bits, HalftimeHash32 produces 256 bits, and HalftimeHash40 produces 320 bits.
+}
+
+
+
 \section{Notations and Conventions}
 
 $H$ and $G$ will denote hash families.
@@ -946,9 +957,9 @@ Cross-machine workloads or persistent hash values may require a consistent block
 
 \begin{figure*}
 \begin{tabular}{cccc}
-\includegraphics[width=9cm]{line-cl-hh24.eps}
+\includegraphics[width=8.5cm]{line-cl-hh24.eps}
 &
-\includegraphics[width=9cm]{amd-cl-hh24.eps}
+\includegraphics[width=8.5cm]{amd-cl-hh24.eps}
 \end{tabular}
 \caption{
   \label{vs-cl}
@@ -962,9 +973,9 @@ Cross-machine workloads or persistent hash values may require a consistent block
 
 \begin{figure*}
 \begin{tabular}{cccc}
-\includegraphics[width=9cm]{amd-16.eps}
+\includegraphics[width=8.5cm]{amd-16.eps}
 &
-\includegraphics[width=9cm]{amd-24.eps}
+\includegraphics[width=8.5cm]{amd-24.eps}
 \end{tabular}
 \caption{
   \label{block-size}

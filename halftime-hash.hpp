@@ -432,26 +432,18 @@ struct EhcBadger {
     }
   }
 
-  // TODO: input should be 2d to prevent mistakes like iteration order switching
   static void Hash(const Block (&input)[encoded_dimension][in_width],
                    const uint64_t entropy[encoded_dimension][in_width],
                    Block output[encoded_dimension]) {
-    // auto a = input[0];
-    // auto b = entropy[0];
     for (unsigned i = 0; i < encoded_dimension; ++i) {
       output[i] = MixOne(input[i][0], entropy[i][0]);
       // TODO: should loading take care of this?
     }
     for (unsigned j = 1; j < in_width; ++j) {
-      // a = &input[j];
-      // b = &entropy[j];
       for (unsigned i = 0; i < encoded_dimension; ++i) {
-        // TODO: reduce entropy index here
         output[i] = Plus(output[i], MixOne(input[i][j], entropy[i][j]));
-        // a += in_width;
         // TODO: this might be optional; it might not matter which way we iterate over
         // entropy
-        // b += in_width;
       }
     }
   }

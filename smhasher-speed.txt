@@ -1,0 +1,9 @@
+clhash                  9.170 0
+halftime\\_hash\\_40      0  9.998
+MeowHash128            12.005 0
+xxh128                 12.162 0
+xxh3                   12.772 0
+halftime\\_hash\\_32       0 13.476
+t1ha0\\_aes\\_avx2         14.591 0
+falkhash               15.089 0
+halftime\\_hash\\_24       0 15.683
