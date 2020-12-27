@@ -3,7 +3,7 @@
 all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe \
 	line-cl-hh24.eps amd-16.eps gcc-local-hh4.eps test-read-each-byte.exe \
 	test-read-each-byte.debug-exe no-collisions.exe no-collisions.debug-exe \
-	smhasher-speed.eps
+	smhasher-speed.eps test-bytes-needed.exe example.exe
 
 RELEASE_FLAGS = -ggdb3 -O3 -march=native -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -DNDEBUG \
@@ -59,3 +59,4 @@ clean: Makefile
 	rm -f no-collisions.exe
 	rm -f no-collisions.debug-exe
 	rm -f smhasher-speed.eps
+	rm -f test-byes-needed.exe

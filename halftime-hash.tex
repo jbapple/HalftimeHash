@@ -175,8 +175,8 @@ It also surpasses the performance of other high-performance string hashing algor
 \includegraphics[width=8cm]{smhasher-speed.eps}
 \captionof{figure}{
   \label{smhasher-speed}
-    Some variants of HalftimeHash are faster than the fastest hash functions in the SMhasher suite, even ones that come with no AU guarantees. \protect\cite{smhasher}
-    MeowHash128 and xxh128 produce 128 output bits, all other SMhasher functions produce 64 bits.
+    Some variants of HalftimeHash are faster than the fastest hash functions in the SMHasher suite, even ones that come with no AU guarantees. \protect\cite{smhasher}
+    MeowHash128 and xxh128 produce 128 output bits, all other SMHasher functions produce 64 bits.
     HalftimeHash24 produces 192 output bits, HalftimeHash32 produces 256 bits, and HalftimeHash40 produces 320 bits.
 }
 
@@ -807,7 +807,7 @@ The combined collision probability is
 \[2^{k(p-32)} + \left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor^k 2^{-32k} + 2^{-32k}\]
 For the main example described above, with $k=3$, $p=2$, $f=8$, $d = 7$, and $w=3$, and for strings less than an exabyte in length, this is more than 83 bits of entropy.
 
-The combined input entropy needed is
+The combined input entropy needed (in words) is
 
 \[
 e w
@@ -816,7 +816,7 @@ e w
 + b d w + k - 1
 \]
 
-When $b$ is 8, as in the AVX-512 version of HalftimeHash, this is less than 31KB for strings of length up to one exabyte -- 8.8KB for strings of length up to one megabyte.
+When $b$ is 8, as in the AVX-512 version of HalftimeHash, this is less than 31KB for strings of length up to one exabyte -- 8.4KB for strings of length up to one megabyte.
 6.1KB of this is for hashing the stack.
 This could be reduced by hashing the stacks with unmodified tree hash and hashing the remaining untouched input string with another instantiation of HalftimeHash with smaller block size, but this adds complexity to the algorithm and reduces performance.
 
@@ -953,7 +953,7 @@ Figure \ref{vs-cl} adds comparisons between clhash, UMASH, and HalftimeHash acro
 Although these machines support different ISA vector extensions, the pattern is similar: at high enough volume, HalftimeHash's throughput exceeds that of the carryless-multiplication families.
 The ``v3'' after the name indicates block size: v3 means a 256-bit block size, while v4 (the default) means 512-bit block size.
 Figure \ref{block-size} shows how the smaller block size performs better on the AMD chip.
-Cross-machine workloads or persistent hash values may require a consistent block size between machines with different maximum SIMD register sizes, but Figure \ref{block-size} shows the performance penalty is not unreasonable.
+%Cross-machine workloads or persistent hash values may require a consistent block size between machines with different maximum SIMD register sizes, but Figure \ref{block-size} shows the performance penalty is not unreasonable.
 
 \begin{figure*}
 \begin{tabular}{cccc}

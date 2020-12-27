@@ -6,6 +6,7 @@
 #include <cstring>
 #include <initializer_list>
 #include <type_traits>
+#include <iostream>
 
 namespace halftime_hash {
 
@@ -314,6 +315,10 @@ constexpr inline int CeilingLog2(size_t n) {
   return (n <= 1) ? 0 : 1 + CeilingLog2(n / 2 + n % 2);
 }
 
+constexpr inline uint64_t FloorLog(uint64_t a, uint64_t b) {
+  return (0 == a) ? 0 : ((b < a) ? 0 : (1 + (FloorLog(a, b / a))));
+}
+
 template <typename BlockWrapper, unsigned dimension, unsigned in_width,
           unsigned encoded_dimension, unsigned out_width, unsigned fanout = 8>
 struct EhcBadger {
@@ -481,16 +486,12 @@ struct EhcBadger {
     }
   }
 
-  static constexpr uint64_t FloorLog(uint64_t a, uint64_t b) {
-    return (0 == a) ? 0 : ((b < a) ? 0 : 1 + (FloorLog(a, b / a)));
-  }
-
   static constexpr size_t GetEntropyBytesNeeded(size_t n) {
     auto b = sizeof(Block) / sizeof(uint64_t);
-    auto h = FloorLog(fanout, n / b / dimension / in_width);
-    return sizeof(uint64_t) *
-           (encoded_dimension * (in_width - 1) + (fanout - 1) * out_width * h +
-            b * fanout * out_width * h + b * dimension * in_width + out_width - 1);
+    auto h = FloorLog(fanout, n / (b * dimension * in_width));
+    auto words = (encoded_dimension * in_width + (fanout - 1) * out_width * h +
+                  b * fanout * out_width * h + b * dimension * in_width + out_width - 1);
+    return sizeof(uint64_t) * words;
   }
 
   struct BlockGreedy {
@@ -561,23 +562,6 @@ struct EhcBadger {
   }
 };  // EhcBadger
 
-// %  1   0   0   1   1   1  17   1   4
-// %  0   1   0  -2  18   4  -1   1   1
-// %  0   0   1   3   2   9   5  20   2
-//
-// -2, -1, 0, 1, 2, 3, 4, 5, 9, 17, 18 20
-
-// Consider:
-// evenness: 3 weight: 11
-//  0   0   1   2   1   1   1   2   4
-//  1   1   0   0   1   2   1  10   1
-//  1   2   1   1   0   0   1   9   8
-
-// evenness: 2 weight: 12
-//  0   0   1   4   1   1   1  10   2
-//  1   1   0   0   1   4   2   1   2
-//  1   4   1   1   0   0   2  10   1
-
 // evenness: 2 weight: 10
 //  0   0   1   4   1   1   2   2   1
 //  1   1   0   0   1   4   1   2   2
@@ -608,20 +592,6 @@ inline void Combine3(const Block input[9], Block output[3]) {
   Badger::template Dot3<1, 2, 2>(output, input[8]);
 }
 
-// template <typename Badger, typename Block>
-// inline void Combine3(const Block input[9], Block output[3]) {
-//   output[0] = input[0];
-//   output[1] = input[1];
-//   output[2] = input[2];
-
-//   Badger::template Dot3<1, -2, 3>(output, input[3]);
-//   Badger::template Dot3<1, 18, 2>(output, input[4]);
-//   Badger::template Dot3<1, 4, 9>(output, input[5]);
-//   Badger::template Dot3<17, -1, 5>(output, input[6]);
-//   Badger::template Dot3<1, 1, 20>(output, input[7]);
-//   Badger::template Dot3<4, 1, 2>(output, input[8]);
-// }
-
 template <typename Badger, typename Block>
 inline void Combine2(const Block input[12], Block output[2]) {
   output[0] = input[0];
@@ -639,60 +609,12 @@ inline void Combine2(const Block input[12], Block output[2]) {
   Badger::template Dot2<1, 5>(output, input[1]);
 }
 
-//
 // evenness: 4 weight: 16
 //   8   8   0   2   1   8   2   1   2   4
 //   0   8   1   0   1   1   4   1   4   2
 //   1   8   1   4   2   8   1   4   1   2
 //   8   1   1   1   1   8   1   8   4   1
-//
-// evenness: 3 weight: 25
-//   8   7   1   9   0   0   1   9   0   1
-//   9   8   0   8   9   9   3   5   0   0
-//   9   4   0   5   0   1   8   3   1   0
-//   8   9   9   0   0   9   4   4   4   0
-//
-// shifts: 14
-// adds: 11
-// evenness: 3 weight: 24
-//   0   9   1   4   8   0   0   7   3   9
-//   9   4   3   0   8   1   0   9   0   9
-//   9   1   0   4   1   0   5   7   1   8
-//   8   2   7   1   1   3   0   3   1   0
-//
-// shifts: 15
-// adds: 9
-// evenness: 3 weight: 23
-//  0   7   7   8   1   0   9   9   4   0
-//  1   8   4   4   2   0   0   9   1   0
-//  0   0   1   1   7   4   1   0   1   1
-//  9   0   1   0   3   7   8   0   7   3
-//
-// shifts: 13
-// adds: 11
-// evenness: 3 weight: 22
-//   3   0   7   9   1   0   8   0   7   9
-//   3   1   9   0   2   0   1   2   1   0
-//   0   0   7   5   2   0   1   3   9   4
-//   0   1   0   4   7   7   1   7   7   0
-//
-// rearranged:
-//  0 0 0 3 9 7 9 1 8 7
-//  0 1 2 3 0 9 0 2 1 1
-//  0 0 3 0 4 7 5 2 1 9
-//  7 1 7 0 0 0 4 7 1 7
-//
-// shifts: 16
-// adds: 7
-// negations: 2
-// evenness: 3 weight: 24
-//  1   0   0   0   1   1  17   2   4 -17
-//  0   1   0   0   1   2   4   1   3   4
-//  0   0   1   0   1   3   9   8   1   8
-//  0   0   0   1   1   4 -10   4  10   3
-//
 
-// NEW!
 // evenness: 3 weight: 21
 // 0   0   0   1   1   4   2   4   1   1
 // 0   1   2   0   0   1   1   2   4   1
@@ -725,40 +647,19 @@ inline void Combine4(const Block input[10], Block output[4]) {
   Badger::template Dot4<1, 1, 1, 8>(output, input[9]);
 }
 
-// template <typename Badger, typename Block>
-// inline void Combine4(const Block input[10], Block output[4]) {
-//   output[0] = input[0];
-//   output[1] = input[1];
-//   output[2] = input[2];
-//   output[3] = input[3];
+// TODO:
+// 0   0   0   0   1   x   x   x   x
+// 1   0   0   0   0   1   x   x   x
+// x   1   0   0   0   0   1   x   x
+// x   x   1   0   0   0   0   1   x
+// x   x   x   1   0   0   0   0   1
 
-//   output[0] = Plus(output[0], input[4]);
-//   output[1] = Plus(output[1], input[4]);
-//   output[2] = Plus(output[2], input[4]);
-//   output[3] = Plus(output[3], input[4]);
-
-//   Badger::template Dot4<1, 2, 3, 4>(output, input[5]);
-//   Badger::template Dot4<17, 4, 9, -10>(output, input[6]);
-//   Badger::template Dot4<2, 1, 8, 4>(output, input[7]);
-//   Badger::template Dot4<4, 3, 1, 10>(output, input[8]);
-//   Badger::template Dot4<-17, 4, 8, 3>(output, input[9]);
-// }
-
-// 0   0   0   0   1   1   5   3   9
-// 1   0   0   0   0   1   1   2   4
-// x   1   0   0   0   0   2   1   7
-// x   x   1   0   0   0   0   8   5
-// x   x   x   1   0   0   0   0   8
-
-
-  
 // evenness: 3 weight: 15
 // 1   0   0   0   0   1   1   2   4
 // 0   1   0   0   0   1   2   1   7
 // 0   0   1   0   0   1   3   8   5
 // 0   0   0   1   0   1   4   9   8
 // 0   0   0   0   1   1   5   3   9
-
 
 template <typename Badger, typename Block>
 inline void Combine5(const Block input[10], Block output[5]) {
@@ -820,24 +721,7 @@ template <typename Block, unsigned count>
 struct alignas(sizeof(Block) * count) Repeat {
   static_assert(sizeof(Block) == alignof(Block), "sizeof(Block) == alignof(Block)");
   Block it[count];
-
-  Repeat operator*(long x) const {
-    Repeat result;
-    for (unsigned i = 0; i < count; ++i) {
-      result.it[i] = it[i] * x;
-    }
-    return result;
-  }
 };
-
-template <typename Block, unsigned count>
-inline Repeat<Block, count> operator*(long x, Repeat<Block, count> here) {
-  Repeat<Block, count> result;
-  for (unsigned i = 0; i < count; ++i) {
-    result.it[i] = here.it[i] * x;
-  }
-  return result;
-}
 
 template <typename InnerBlockWrapper, unsigned count>
 struct RepeatWrapper {
@@ -947,6 +831,32 @@ inline Repeat<Block, count> Negate(Repeat<Block, count> a) {
 }
 
 }  // namespace
+
+template <typename Wrapper, unsigned out_width>
+inline constexpr size_t GetEntropyBytesNeeded(size_t n) {
+  return (3 == out_width)
+             ? EhcBadger<Wrapper, 7, 3, 9, out_width>::GetEntropyBytesNeeded(n)
+         : (2 == out_width)
+             ? EhcBadger<Wrapper, 11, 2, 12, out_width>::GetEntropyBytesNeeded(
+                   n)
+         : (4 == out_width)
+             ? EhcBadger<Wrapper, 7, 3, 10, out_width>::GetEntropyBytesNeeded(
+                   n)
+             : EhcBadger<Wrapper, 5, 3, 9, out_width>::GetEntropyBytesNeeded(
+                   n);
+}
+
+inline constexpr size_t MaxEntropyBytesNeeded() {
+  auto b = 8;
+  auto h = halftime_hash::FloorLog(8, ~0ull / 22);
+  auto words = 22 + 7 * 5 * h + b * 8 * 5 * h + b * 22 + 5 - 1;
+  // TODO: include words of tabulation?
+  auto tab_words = 0;//6 * 8 * 256;
+  return sizeof(uint64_t) * (words + tab_words);
+}
+
+// TODO: this is not monotonic, so we need an upper bound"
+constexpr size_t kEntropyBytesNeeded = 35000;
 
 template <void (*Hasher)(const uint64_t* entropy, const char* char_input, size_t length,
                          uint64_t output[]),
@@ -1058,14 +968,6 @@ inline void V1Scalar(const uint64_t* entropy, const char* char_input, size_t len
 }
 
 template <unsigned out_width>
-inline constexpr size_t GetEntropyBytesNeeded(size_t n) {
-  return (3 == out_width)
-             ? EhcBadger<BlockWrapperScalar, 7, 3, 9, out_width>::GetEntropyBytesNeeded(n)
-             : EhcBadger<BlockWrapperScalar, 11, 2, 12, out_width>::GetEntropyBytesNeeded(
-                   n);
-}
-
-template <unsigned out_width>
 inline void V4(const uint64_t* entropy, const char* char_input, size_t length,
                uint64_t output[out_width]);
 template <unsigned out_width>
@@ -1078,268 +980,48 @@ template <unsigned out_width>
 inline void V1(const uint64_t* entropy, const char* char_input, size_t length,
                uint64_t output[out_width]);
 
+#define SPECIALIZE(version, isa, out_width, dimension, in_width, encoded_dimension)  \
+  template <>                                                                        \
+  inline void V##version<out_width>(const uint64_t* entropy, const char* char_input, \
+                                    size_t length, uint64_t output[out_width]) {     \
+    return V##version##isa<dimension, in_width, encoded_dimension, out_width>(       \
+        entropy, char_input, length, output);                                        \
+  }
+
+#define SPECIALIZE_4(version, isa)      \
+  SPECIALIZE(version, isa, 5, 5, 3, 9)  \
+  SPECIALIZE(version, isa, 4, 7, 3, 10) \
+  SPECIALIZE(version, isa, 3, 7, 3, 9)  \
+  SPECIALIZE(version, isa, 2, 11, 2, 12)
+
 #if __AVX512F__
 
-template <>
-inline void V4<5>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[5]) {
-  return V4Avx512<5, 3, 9, 5>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V4<4>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[4]) {
-  return V4Avx512<7, 3, 10, 4>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V4<3>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[3]) {
-  return V4Avx512<7, 3, 9, 3>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V4<2>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[2]) {
-  return V4Avx512<11, 2, 12, 2>(entropy, char_input, length, output);
-}
+SPECIALIZE_4(4, Avx512)
+SPECIALIZE_4(3, Avx2)
+SPECIALIZE_4(2, Sse2)
+SPECIALIZE_4(1, Scalar)
 
 #elif __AVX2__
 
-template <>
-inline void V4<5>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[5]) {
-  return V4Avx2<5, 3, 9, 5>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V4<4>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[4]) {
-  return V4Avx2<7, 3, 10, 4>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V4<3>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[3]) {
-  return V4Avx2<7, 3, 9, 3>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V4<2>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[2]) {
-  return V4Avx2<11, 2, 12, 2>(entropy, char_input, length, output);
-}
+SPECIALIZE_4(4, Avx2)
+SPECIALIZE_4(3, Avx2)
+SPECIALIZE_4(2, Sse2)
+SPECIALIZE_4(1, Scalar)
 
 #elif __SSE2__
 
-template <>
-inline void V4<5>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[5]) {
-  return V4Sse2<5, 3, 9, 5>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V4<4>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[4]) {
-  return V4Sse2<7, 3, 10, 4>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V4<3>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[3]) {
-  return V4Sse2<7, 3, 9, 3>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V4<2>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[2]) {
-  return V4Sse2<11, 2, 12, 2>(entropy, char_input, length, output);
-}
+SPECIALIZE_4(4, Sse2)
+SPECIALIZE_4(3, Sse2)
+SPECIALIZE_4(2, Sse2)
+SPECIALIZE_4(1, Scalar)
 
 #else
 
-template <>
-inline void V4<5>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[5]) {
-  return V4Scalar<5, 3, 9, 5>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V4<4>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[4]) {
-  return V4Scalar<7, 3, 10, 4>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V4<3>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[3]) {
-  return V4Scalar<7, 3, 9, 3>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V4<2>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[2]) {
-  return V4Scalar<11, 2, 12, 2>(entropy, char_input, length, output);
-}
+SPECIALIZE_4(4, Scalar)
+SPECIALIZE_4(3, Scalar)
+SPECIALIZE_4(2, Scalar)
+SPECIALIZE_4(1, Scalar)
 
 #endif
-
-#if __AVX2__
-
-template <>
-inline void V3<5>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[5]) {
-  return V3Avx2<5, 3, 9, 5>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V3<4>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[4]) {
-  return V3Avx2<7, 3, 10, 4>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V3<3>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[3]) {
-  return V3Avx2<7, 3, 9, 3>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V3<2>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[2]) {
-  return V3Avx2<11, 2, 12, 2>(entropy, char_input, length, output);
-}
-
-#elif __SSE2__
-
-template <>
-inline void V3<5>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[5]) {
-  return V3Sse2<5, 3, 9, 5>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V3<4>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[4]) {
-  return V3Sse2<7, 3, 10, 4>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V3<3>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[3]) {
-  return V3Sse2<7, 3, 9, 3>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V3<2>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[2]) {
-  return V3Sse2<11, 2, 12, 2>(entropy, char_input, length, output);
-}
-
-#else
-
-template <>
-inline void V3<5>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[5]) {
-  return V3Scalar<5, 3, 9, 5>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V3<4>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[4]) {
-  return V3Scalar<7, 3, 10, 4>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V3<3>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[3]) {
-  return V3Scalar<7, 3, 9, 3>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V3<2>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[2]) {
-  return V3Scalar<11, 2, 12, 2>(entropy, char_input, length, output);
-}
-
-#endif
-
-#if __SSE2__
-
-template <>
-inline void V2<5>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[5]) {
-  return V2Sse2<5, 3, 9, 5>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V2<4>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[4]) {
-  return V2Sse2<7, 3, 10, 4>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V2<3>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[3]) {
-  return V2Sse2<7, 3, 9, 3>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V2<2>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[2]) {
-  return V2Sse2<11, 2, 12, 2>(entropy, char_input, length, output);
-}
-
-#else
-
-template <>
-inline void V2<5>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[5]) {
-  return V2Scalar<5, 3, 9, 5>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V2<4>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[4]) {
-  return V2Scalar<7, 3, 10, 4>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V2<3>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[3]) {
-  return V2Scalar<7, 3, 9, 3>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V2<2>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[2]) {
-  return V2Scalar<11, 2, 12, 2>(entropy, char_input, length, output);
-}
-
-#endif
-
-template <>
-inline void V1<5>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[5]) {
-  return V1Scalar<5, 3, 9, 5>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V1<4>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[4]) {
-  return V1Scalar<7, 3, 10, 4>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V1<3>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[3]) {
-  return V1Scalar<7, 3, 9, 3>(entropy, char_input, length, output);
-}
-
-template <>
-inline void V1<2>(const uint64_t* entropy, const char* char_input, size_t length,
-                  uint64_t output[2]) {
-  return V1Scalar<11, 2, 12, 2>(entropy, char_input, length, output);
-}
 
 }  // namespace halftime_hash

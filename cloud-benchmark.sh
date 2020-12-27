@@ -6,7 +6,8 @@ scp -o StrictHostKeyChecking=no -i ~/.ssh/aws-key-001.pem ~/.ssh/id_rsa.1* ubunt
 scp -o StrictHostKeyChecking=no -i ~/.ssh/aws-key-001.pem ~/.ssh/config ubuntu@$SERVER:~/.ssh/ &&
 scp -o StrictHostKeyChecking=no -i ~/.ssh/aws-key-001.pem -r ~/.aws ubuntu@$SERVER: &&
 ssh -i ~/.ssh/aws-key-001.pem ubuntu@$SERVER sudo apt-get update &&
-ssh -i ~/.ssh/aws-key-001.pem ubuntu@$SERVER sudo apt-get --yes install mosh &&
+ssh -i ~/.ssh/aws-key-001.pem ubuntu@$SERVER sudo apt-get --yes install mosh tmux &&
+scp -o StrictHostKeyChecking=no -i ~/.ssh/aws-key-001.pem ~/.tmux.conf ubuntu@$SERVER: &&
 mosh --ssh "ssh -i ~/.ssh/aws-key-001.pem" ubuntu@$SERVER
 
 return
@@ -18,18 +19,18 @@ export DIRECTORY='HalftimeHash' &&
 export INSTANCE_TYPE=$(curl http://169.254.169.254/latest/dynamic/instance-identity/document 2>/dev/null | grep instanceType 2>/dev/null | cut -d '"' -f 4) &&
 sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test &&
 sudo apt-get update &&
-sudo apt --yes install gcc-10 g++-10 make git awscli &&
+sudo apt --yes install gcc-10 g++-10 make git awscli emacs &&
 wget https://apt.llvm.org/llvm.sh &&
 chmod +x llvm.sh &&
 sudo ./llvm.sh 11 &&
 git clone $REPO $DIRECTORY &&
-cd $DIRECTORY
+cd $DIRECTORY &&
+git checkout $BRANCH &&
 
 git submodule update --init --recursive &&
 export COMMIT=$(git rev-parse --short HEAD) &&
 export CC=clang-11 &&
 export CXX=clang++-11 &&
-git checkout scratch &&
 git submodule update --init --recursive &&
 make -k -j$(nproc) benchmark.exe >/dev/null &&
 date &&
