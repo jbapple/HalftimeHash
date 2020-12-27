@@ -181,12 +181,12 @@ inline void Encode3(Block raw_io[9 * 3]) {
 }
 
 template <typename Block>
-inline void Encode2(Block raw_io[12 * 2]) {
+inline void Encode2(Block raw_io[7 * 2]) {
   auto io = reinterpret_cast<Block(*)[2]>(raw_io);
   for (int i = 0; i < 2; ++i) {
-    io[11][i] = io[0][i];
-    for (int j = 1; j < 11; ++j) {
-      io[11][i] = Xor(io[11][i], io[j][i]);
+    io[6][i] = io[0][i];
+    for (int j = 1; j < 6; ++j) {
+      io[6][i] = Xor(io[6][i], io[j][i]);
     }
   }
 }
@@ -300,7 +300,7 @@ inline void Encode5(Block raw_io[9 * 3]) {
 }
 
 template <typename Badger, typename Block>
-inline void Combine2(const Block input[12], Block output[2]);
+inline void Combine2(const Block input[7], Block output[2]);
 
 template <typename Badger, typename Block>
 inline void Combine3(const Block input[9], Block output[3]);
@@ -593,20 +593,20 @@ inline void Combine3(const Block input[9], Block output[3]) {
 }
 
 template <typename Badger, typename Block>
-inline void Combine2(const Block input[12], Block output[2]) {
+inline void Combine2(const Block input[7], Block output[2]) {
   output[0] = input[0];
   output[1] = input[1];
 
-  Badger::template Dot2<1, 1>(output, input[3]);
-  Badger::template Dot2<1, -1>(output, input[4]);
-  Badger::template Dot2<1, 2>(output, input[5]);
-  Badger::template Dot2<2, 1>(output, input[6]);
-  Badger::template Dot2<-1, 2>(output, input[7]);
-  Badger::template Dot2<2, -1>(output, input[8]);
-  Badger::template Dot2<1, 3>(output, input[9]);
-  Badger::template Dot2<1, 4>(output, input[10]);
-  Badger::template Dot2<4, 1>(output, input[11]);
-  Badger::template Dot2<1, 5>(output, input[1]);
+  Badger::template Dot2<1, 1>(output, input[2]);
+  // Badger::template Dot2<1, -1>(output, input[4]);
+  Badger::template Dot2<1, 2>(output, input[3]);
+  Badger::template Dot2<2, 1>(output, input[4]);
+  // Badger::template Dot2<-1, 2>(output, input[7]);
+  // Badger::template Dot2<2, -1>(output, input[8]);
+  // Badger::template Dot2<1, 3>(output, input[9]);
+  Badger::template Dot2<1, 4>(output, input[5]);
+  Badger::template Dot2<4, 1>(output, input[6]);
+  // Badger::template Dot2<1, 5>(output, input[1]);
 }
 
 // evenness: 4 weight: 16
@@ -837,7 +837,7 @@ inline constexpr size_t GetEntropyBytesNeeded(size_t n) {
   return (3 == out_width)
              ? EhcBadger<Wrapper, 7, 3, 9, out_width>::GetEntropyBytesNeeded(n)
          : (2 == out_width)
-             ? EhcBadger<Wrapper, 11, 2, 12, out_width>::GetEntropyBytesNeeded(
+             ? EhcBadger<Wrapper, 6, 2, 7, out_width>::GetEntropyBytesNeeded(
                    n)
          : (4 == out_width)
              ? EhcBadger<Wrapper, 7, 3, 10, out_width>::GetEntropyBytesNeeded(
@@ -848,8 +848,8 @@ inline constexpr size_t GetEntropyBytesNeeded(size_t n) {
 
 inline constexpr size_t MaxEntropyBytesNeeded() {
   auto b = 8;
-  auto h = halftime_hash::FloorLog(8, ~0ull / 22);
-  auto words = 22 + 7 * 5 * h + b * 8 * 5 * h + b * 22 + 5 - 1;
+  auto h = halftime_hash::FloorLog(8, ~0ull / 21);
+  auto words = 21 + 7 * 5 * h + b * 8 * 5 * h + b * 21 + 5 - 1;
   // TODO: include words of tabulation?
   auto tab_words = 0;//6 * 8 * 256;
   return sizeof(uint64_t) * (words + tab_words);
@@ -992,7 +992,7 @@ inline void V1(const uint64_t* entropy, const char* char_input, size_t length,
   SPECIALIZE(version, isa, 5, 5, 3, 9)  \
   SPECIALIZE(version, isa, 4, 7, 3, 10) \
   SPECIALIZE(version, isa, 3, 7, 3, 9)  \
-  SPECIALIZE(version, isa, 2, 11, 2, 12)
+  SPECIALIZE(version, isa, 2, 6, 2, 7)
 
 #if __AVX512F__
 
