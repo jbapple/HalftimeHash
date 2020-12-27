@@ -17,6 +17,9 @@
 
 using namespace std;
 
+using namespace halftime_hash;
+using namespace halftime_hash::advanced;
+
 #include <immintrin.h>
 #include <x86intrin.h>
 
@@ -158,25 +161,25 @@ int main(int argc, char** argv) {
       reps = max(reps, 8.0);
       reps = min(1000.0 * 1000, reps);
       Duration hh_time[8] = {
-          TimeMulti<WrapHash<halftime_hash::V4<2>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<halftime_hash::V4<3>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<halftime_hash::V4<4>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<halftime_hash::V4<5>>>(reps, entropy, data.data(), i),
+          TimeMulti<WrapHash<V4<2>>>(reps, entropy, data.data(), i),
+          TimeMulti<WrapHash<V4<3>>>(reps, entropy, data.data(), i),
+          TimeMulti<WrapHash<V4<4>>>(reps, entropy, data.data(), i),
+          TimeMulti<WrapHash<V4<5>>>(reps, entropy, data.data(), i),
 
-          TimeMulti<WrapHash<halftime_hash::V3<2>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<halftime_hash::V3<3>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<halftime_hash::V3<4>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<halftime_hash::V3<5>>>(reps, entropy, data.data(), i),
+          TimeMulti<WrapHash<V3<2>>>(reps, entropy, data.data(), i),
+          TimeMulti<WrapHash<V3<3>>>(reps, entropy, data.data(), i),
+          TimeMulti<WrapHash<V3<4>>>(reps, entropy, data.data(), i),
+          TimeMulti<WrapHash<V3<5>>>(reps, entropy, data.data(), i),
 
-          // TimeMulti<WrapHash<halftime_hash::V2<2>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<halftime_hash::V2<3>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<halftime_hash::V2<4>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<halftime_hash::V2<5>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V2<2>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V2<3>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V2<4>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V2<5>>>(reps, entropy, data.data(), i),
 
-          // TimeMulti<WrapHash<halftime_hash::V1<2>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<halftime_hash::V1<3>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<halftime_hash::V1<4>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<halftime_hash::V1<5>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V1<2>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V1<3>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V1<4>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V1<5>>>(reps, entropy, data.data(), i),
       };
 
       auto cl_time = TimeMulti<ClhashWrap>(reps, entropy, data.data(), i);

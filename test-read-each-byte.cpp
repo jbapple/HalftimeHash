@@ -16,6 +16,8 @@
 #include "halftime-hash.hpp"
 
 using namespace std;
+using namespace halftime_hash;
+using namespace halftime_hash::advanced;
 
 template <void Hash(const uint64_t entropy[], const char input[], uint64_t char_length,
                     uint64_t output[])>
@@ -59,7 +61,7 @@ int main(int argc, char** argv) {
   vector<char> data(max_length, 0);
   for (unsigned i = min_length; i < max_length; ++i) {
     for (unsigned j = 0; j < min_length; ++j) {
-      TestHash<halftime_hash::V1<5>>(entropy, data.data(), i, j);
+      TestHash<V1<2>>(entropy, data.data(), i, j);
     }
   }
 }

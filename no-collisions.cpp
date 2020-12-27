@@ -16,6 +16,8 @@
 #include "halftime-hash.hpp"
 
 using namespace std;
+using namespace halftime_hash;
+using namespace halftime_hash::advanced;
 
 int main(int, char**) {
   map<array<uint64_t,2>, int> seen;
@@ -35,20 +37,20 @@ int main(int, char**) {
     for (int i = 0; i < 22; ++i) {
       a[i] = ((b >> i) & 1) ? 1 : 0;
     }
-    halftime_hash::V1<2>(entropy, reinterpret_cast<const char*>(&a[0]),
+    V1<2>(entropy, reinterpret_cast<const char*>(&a[0]),
                          22 * sizeof(uint64_t), &result[0]);
     auto found = seen.find(result);
     if (found != seen.end()) {
       cout << hex << found->second << endl
            << b << endl
            << result[0] << ", " << result[1] << endl;
-      halftime_hash::V1<2>(entropy, reinterpret_cast<const char*>(&a[0]),
+      V1<2>(entropy, reinterpret_cast<const char*>(&a[0]),
                            22 * sizeof(uint64_t), &result[0]);
       auto c = found->second;
       for (int i = 0; i < 22; ++i) {
         a[i] = ((c >> i) & 1) ? 1 : 0;
       }
-      halftime_hash::V1<2>(entropy, reinterpret_cast<const char*>(&a[0]),
+      V1<2>(entropy, reinterpret_cast<const char*>(&a[0]),
                            22 * sizeof(uint64_t), &result[0]);
       return 1;
     }

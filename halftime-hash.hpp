@@ -10,6 +10,8 @@
 
 namespace halftime_hash {
 
+namespace advanced {
+
 namespace {
 
 #if __AVX512F__
@@ -598,15 +600,10 @@ inline void Combine2(const Block input[7], Block output[2]) {
   output[1] = input[1];
 
   Badger::template Dot2<1, 1>(output, input[2]);
-  // Badger::template Dot2<1, -1>(output, input[4]);
   Badger::template Dot2<1, 2>(output, input[3]);
   Badger::template Dot2<2, 1>(output, input[4]);
-  // Badger::template Dot2<-1, 2>(output, input[7]);
-  // Badger::template Dot2<2, -1>(output, input[8]);
-  // Badger::template Dot2<1, 3>(output, input[9]);
   Badger::template Dot2<1, 4>(output, input[5]);
   Badger::template Dot2<4, 1>(output, input[6]);
-  // Badger::template Dot2<1, 5>(output, input[1]);
 }
 
 // evenness: 4 weight: 16
@@ -848,15 +845,12 @@ inline constexpr size_t GetEntropyBytesNeeded(size_t n) {
 
 inline constexpr size_t MaxEntropyBytesNeeded() {
   auto b = 8;
-  auto h = halftime_hash::FloorLog(8, ~0ull / 21);
+  auto h = FloorLog(8, ~0ull / 21);
   auto words = 21 + 7 * 5 * h + b * 8 * 5 * h + b * 21 + 5 - 1;
   // TODO: include words of tabulation?
   auto tab_words = 0;//6 * 8 * 256;
   return sizeof(uint64_t) * (words + tab_words);
 }
-
-// TODO: this is not monotonic, so we need an upper bound"
-constexpr size_t kEntropyBytesNeeded = 35000;
 
 template <void (*Hasher)(const uint64_t* entropy, const char* char_input, size_t length,
                          uint64_t output[]),
@@ -1023,5 +1017,36 @@ SPECIALIZE_4(2, Scalar)
 SPECIALIZE_4(1, Scalar)
 
 #endif
+
+}  // namespace advanced
+
+constexpr size_t kEntropyBytesNeeded =
+    256 * 3 * sizeof(uint64_t) * sizeof(uint64_t) +
+    advanced::GetEntropyBytesNeeded<
+        advanced::RepeatWrapper<advanced::BlockWrapperScalar, 8>, 2>(~0ull);
+
+inline uint64_t HalftimeHashStyle512(
+    const uint64_t entropy[kEntropyBytesNeeded / sizeof(uint64_t)], const char input[],
+    size_t length) {
+  return advanced::TabulateAfter<advanced::V4<2>, 2>(entropy, input, length);
+}
+
+inline uint64_t HalftimeHashStyle256(
+    const uint64_t entropy[kEntropyBytesNeeded / sizeof(uint64_t)], const char input[],
+    size_t length) {
+  return advanced::TabulateAfter<advanced::V3<2>, 2>(entropy, input, length);
+}
+
+inline uint64_t HalftimeHashStyle128(
+    const uint64_t entropy[kEntropyBytesNeeded / sizeof(uint64_t)], const char input[],
+    size_t length) {
+  return advanced::TabulateAfter<advanced::V2<2>, 2>(entropy, input, length);
+}
+
+inline uint64_t HalftimeHashStyle64(
+    const uint64_t entropy[kEntropyBytesNeeded / sizeof(uint64_t)], const char input[],
+    size_t length) {
+  return advanced::TabulateAfter<advanced::V1<2>, 2>(entropy, input, length);
+}
 
 }  // namespace halftime_hash
