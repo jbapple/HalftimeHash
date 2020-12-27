@@ -77,6 +77,46 @@ struct BlockWrapper256 {
 
 #endif
 
+#if defined(__ARM_ARCH)
+
+#include <arm_neon.h>
+
+using u128 = uint64x2_t;
+
+inline u128 LeftShift(u128 a, int i) { return vshlq_s64(a, vdupq_n_s64(i)); }
+inline u128 Plus(u128 a, u128 b) { return vaddq_s64(a, b); }
+inline u128 Minus(u128 a, u128 b) { return vsubq_s64(a, b); }
+inline u128 Plus32(u128 a, u128 b) { return vaddq_s32(a, b); }
+inline u128 RightShift32(u128 a) { return vshlq_u64(a, vdupq_n_s64(-32)); }
+
+inline u128 Times(u128 a, u128 b) {
+  uint32x2_t a_lo = vmovn_u64(a);
+  uint32x2_t b_lo = vmovn_u64(b);
+  return vmull_u32(a_lo, b_lo);
+}
+
+inline u128 Xor(u128 a, u128 b) { return veorq_s32(a, b); }
+
+static inline u128 Negate(u128 a) {
+  const auto zero = vdupq_n_s64(0);
+  return Minus(zero, a);
+}
+
+inline uint64_t Sum(u128 a) { return vgetq_lane_s64(a, 0) + vgetq_lane_s64(a, 1); }
+
+struct BlockWrapper128 {
+  using Block = u128;
+
+  static u128 LoadBlock(const void* x) {
+    auto y = reinterpret_cast<const int32_t*>(x);
+    return vld1q_s32(y);
+  }
+
+  static u128 LoadOne(uint64_t entropy) { return vdupq_n_s64(entropy); }
+};
+
+#endif
+
 #if __SSE2__
 
 using u128 = __m128i;
@@ -931,6 +971,34 @@ inline void V4Sse2(const uint64_t* entropy, const char* char_input, size_t lengt
 
 #endif
 
+#if defined(__ARM_ARCH)
+
+template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
+          unsigned out_width>
+inline void V2Neon(const uint64_t* entropy, const char* char_input, size_t length,
+                   uint64_t output[out_width]) {
+  return Hash<BlockWrapper128, dimension, in_width, encoded_dimension, out_width>(
+      entropy, char_input, length, output);
+}
+
+template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
+          unsigned out_width>
+inline void V3Neon(const uint64_t* entropy, const char* char_input, size_t length,
+                   uint64_t output[out_width]) {
+  return Hash<RepeatWrapper<BlockWrapper128, 2>, dimension, in_width, encoded_dimension,
+              out_width>(entropy, char_input, length, output);
+}
+
+template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
+          unsigned out_width>
+inline void V4Neon(const uint64_t* entropy, const char* char_input, size_t length,
+                   uint64_t output[out_width]) {
+  return Hash<RepeatWrapper<BlockWrapper128, 4>, dimension, in_width, encoded_dimension,
+              out_width>(entropy, char_input, length, output);
+}
+
+#endif
+
 template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
           unsigned out_width>
 inline void V4Scalar(const uint64_t* entropy, const char* char_input, size_t length,
@@ -1009,6 +1077,13 @@ SPECIALIZE_4(1, Scalar)
 SPECIALIZE_4(4, Sse2)
 SPECIALIZE_4(3, Sse2)
 SPECIALIZE_4(2, Sse2)
+SPECIALIZE_4(1, Scalar)
+
+#elif defined(__ARM_ARCH)
+
+SPECIALIZE_4(4, Neon)
+SPECIALIZE_4(3, Neon)
+SPECIALIZE_4(2, Neon)
 SPECIALIZE_4(1, Scalar)
 
 #else
