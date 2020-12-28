@@ -8,7 +8,7 @@ set logscale x 2
 unset logscale y
 set grid
 set xrange[2**20:2**160]
-set yrange[0:80]
+set yrange[10:70]
 unset offsets
 set format x '%L'
 plot 'points-example.txt' using (1/column(2)):1:3 with labels point pt 7 offset char -1,1, '' using (1/column(5)):4:6 with labels point pt 7 offset char 2,-1

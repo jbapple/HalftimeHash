@@ -1,30 +1,31 @@
-#include "halftime-hash.hpp"
-
 #include <algorithm>
 #include <array>
 #include <cassert>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <map>
 #include <sstream>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 #include <vector>
-#include <unordered_map>
+
+#include "StronglyUniversalStringHashing/include/clhash.h"
+#include "halftime-hash.hpp"
+#include "umash/umash.h"
 
 using namespace std;
 
 using namespace halftime_hash;
 using namespace halftime_hash::advanced;
 
+#if defined(__x86_64)
 #include <immintrin.h>
 #include <x86intrin.h>
-
-#include "StronglyUniversalStringHashing/include/clhash.h"
-#include "umash/umash.h"
 
 decltype(chrono::steady_clock::now()) Now() {
   _mm_mfence();
@@ -32,6 +33,19 @@ decltype(chrono::steady_clock::now()) Now() {
   _mm_mfence();
   return result;
 }
+#elif defined(__ARM_ARCH)
+decltype(chrono::steady_clock::now()) Now() {
+  _mm_mfence();
+  auto result = chrono::steady_clock::now();
+  _mm_mfence();
+  return result;
+}
+#else
+decltype(chrono::steady_clock::now()) Now() {
+  auto result = chrono::steady_clock::now();
+  return result;
+}
+#endif
 
 uint64_t dummy = 0;
 
@@ -142,13 +156,13 @@ int main(int argc, char** argv) {
   vector<char> data(max_length, 0);
 
   cout << "0 \t best_hh";
-  for (int i : {4,3}) {
-    for (int j : {2, 3, 4, 5}) {
+  for (int i : {4}) {
+    for (int j : {2,3,4,5}) {
       cout << "\t"
            << "Halftime" << (j * 8) << "v" << i;
     }
   }
-  cout << "\t clhash \t clhash128 \t umash \t umash128";
+  // cout << "\t clhash \t clhash128 \t umash \t umash128";
   cout << endl;
 
   uint64_t loop_count = 4;
@@ -166,10 +180,10 @@ int main(int argc, char** argv) {
           TimeMulti<WrapHash<V4<4>>>(reps, entropy, data.data(), i),
           TimeMulti<WrapHash<V4<5>>>(reps, entropy, data.data(), i),
 
-          TimeMulti<WrapHash<V3<2>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V3<3>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V3<4>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V3<5>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V3<2>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V3<3>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V3<4>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V3<5>>>(reps, entropy, data.data(), i),
 
           // TimeMulti<WrapHash<V2<2>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<V2<3>>>(reps, entropy, data.data(), i),
@@ -182,34 +196,34 @@ int main(int argc, char** argv) {
           // TimeMulti<WrapHash<V1<5>>>(reps, entropy, data.data(), i),
       };
 
-      auto cl_time = TimeMulti<ClhashWrap>(reps, entropy, data.data(), i);
-      auto cl_time128 = TimeMulti<clhashWrap128>(reps, entropy, data.data(), i);
-      auto um_time = TimeMulti<umashWrap>(reps, entropy, data.data(), i);
-      auto um_time128 = TimeMulti<umash128>(reps, entropy, data.data(), i);
+      // auto cl_time = TimeMulti<ClhashWrap>(reps, entropy, data.data(), i);
+      // auto cl_time128 = TimeMulti<clhashWrap128>(reps, entropy, data.data(), i);
+      // auto um_time = TimeMulti<umashWrap>(reps, entropy, data.data(), i);
+      // auto um_time128 = TimeMulti<umash128>(reps, entropy, data.data(), i);
 
       if (timings.find(i) == timings.end()) {
         timings[i] = {};
       }
       int k = 0;
-      for (; k < 8; ++k) {
+      for (; k < 4; ++k) {
         timings[i][k] = max(timings[i][k], 1.0 * i / hh_time[k].count());
       }
 
-      timings[i][k + 0] = max(timings[i][k + 0], 1.0 * i / cl_time.count());
-      timings[i][k + 1] = max(timings[i][k + 1], 1.0 * i / cl_time128.count());
-      timings[i][k + 2] = max(timings[i][k + 2], 1.0 * i / um_time.count());
-      timings[i][k + 3] = max(timings[i][k + 3], 1.0 * i / um_time128.count());
+      // timings[i][k + 0] = max(timings[i][k + 0], 1.0 * i / cl_time.count());
+      // timings[i][k + 1] = max(timings[i][k + 1], 1.0 * i / cl_time128.count());
+      // timings[i][k + 2] = max(timings[i][k + 2], 1.0 * i / um_time.count());
+      // timings[i][k + 3] = max(timings[i][k + 3], 1.0 * i / um_time128.count());
     }
   }
 
   for (auto& j : timings) {
     cout << setprecision(8) << j.first;
     auto best_hh = j.second[0];
-    for (int i = 1; i < 8; ++i) {
+    for (int i = 1; i < 4; ++i) {
       best_hh = max(best_hh, j.second[i]);
     }
     cout << "\t" << best_hh;
-    for (int i = 0; i < 12; ++i) {
+    for (int i = 0; i < 4; ++i) {
       cout << "\t" << j.second[i];
     }
     cout << endl;

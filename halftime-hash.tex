@@ -77,7 +77,7 @@
 \newenvironment{blockquote}
 {\begin{quote}\itshape}
 {\end{quote}}
-\title{HalftimeHash: modern hashing without 64-bit multipliers, prime numbers, or finite fields}
+\title{HalftimeHash: modern hashing without 64-bit multipliers or finite fields}
 \author{Jim Apple}
 \orcid{0000-0002-8685-9451}
 \email{jbapple@apache.org}
@@ -1124,6 +1124,12 @@ Thanks to Daniel Lemire and Paul Khuong for helpful discussions.
 %% Since $q$ is at most 2 in the V we use
 
 %% By the almost-$\Delta$ universality of $H$, $\Pr_s \left[V_{i,m} H(s_m, e(x)) =  V_{i,m} H(s_m, e(y)) + \delta'\right]$
+
+% passes smhasher: poly_2_mersenne poly_3_mersenne poly_4_mersenne
+% tabulation floppsyhash GoodOAAT prvhash42_128 prvhash42_64
+% prvhash42s_64 prvhash42s_128 HighwayHash64 mirhashstrict pengyhash
+% City64low City128 CityCrc128 FarmHash64 FarmHash64 FarmHash128
+% xxHash64 xxh3low xxh128 xxh128low wyhash umash64
 
 %%  LocalWords:  HalftimeHash codomain ISA's UMASH falkhash MeowHash
 %%  LocalWords:  MetroHash FarmHash clhash wyhash farmhash UHASH EHC
