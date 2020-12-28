@@ -22,9 +22,11 @@ sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test &&
 sudo apt-get update &&
 sudo apt --yes install gcc-10 g++-10 make git awscli emacs
 
-sudo apt --yes install clang-10 cmake
-git clone https://github.com/jbapple/smhasher-1 smhasher
-cd smhasher
+sudo apt --yes install clang-10
+
+sudo apt --yes install cmake &&
+git clone "https://github.com/jbapple/smhasher-1" smhasher &&
+cd smhasher &&
 git submodule update --init --recursive
 
 wget https://apt.llvm.org/llvm.sh &&

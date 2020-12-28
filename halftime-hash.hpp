@@ -240,9 +240,9 @@ inline void Encode3(Block raw_io[9 * 3]) {
 }
 
 template <typename Block>
-inline void Encode2(Block raw_io[7 * 2]) {
-  auto io = reinterpret_cast<Block(*)[2]>(raw_io);
-  for (int i = 0; i < 2; ++i) {
+inline void Encode2(Block raw_io[7 * 3]) {
+  auto io = reinterpret_cast<Block(*)[3]>(raw_io);
+  for (int i = 0; i < 3; ++i) {
     io[6][i] = io[0][i];
     for (int j = 1; j < 6; ++j) {
       io[6][i] = Xor(io[6][i], io[j][i]);
@@ -894,7 +894,7 @@ inline constexpr size_t GetEntropyBytesNeeded(size_t n) {
   return (3 == out_width)
              ? EhcBadger<Wrapper, 7, 3, 9, out_width>::GetEntropyBytesNeeded(n)
          : (2 == out_width)
-             ? EhcBadger<Wrapper, 6, 2, 7, out_width>::GetEntropyBytesNeeded(
+             ? EhcBadger<Wrapper, 6, 3, 7, out_width>::GetEntropyBytesNeeded(
                    n)
          : (4 == out_width)
              ? EhcBadger<Wrapper, 7, 3, 10, out_width>::GetEntropyBytesNeeded(
@@ -1074,7 +1074,7 @@ inline void V1(const uint64_t* entropy, const char* char_input, size_t length,
   SPECIALIZE(version, isa, 5, 5, 3, 9)  \
   SPECIALIZE(version, isa, 4, 7, 3, 10) \
   SPECIALIZE(version, isa, 3, 7, 3, 9)  \
-  SPECIALIZE(version, isa, 2, 6, 2, 7)
+  SPECIALIZE(version, isa, 2, 6, 3, 7)
 
 #if __AVX512F__
 

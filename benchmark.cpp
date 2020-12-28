@@ -180,6 +180,9 @@ int main(int argc, char** argv) {
           TimeMulti<WrapHash<V4<4>>>(reps, entropy, data.data(), i),
           TimeMulti<WrapHash<V4<5>>>(reps, entropy, data.data(), i),
 
+          // TimeMulti<WrapHash< Hash<RepeatWrapper<BlockWrapper512, 2>, 6, 2, encoded_dimension,
+          //     out_width>(entropy, char_input, length, output);V4<5>>>(reps, entropy, data.data(), i),
+
           // TimeMulti<WrapHash<V3<2>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<V3<3>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<V3<4>>>(reps, entropy, data.data(), i),
