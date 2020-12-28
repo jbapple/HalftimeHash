@@ -2,13 +2,16 @@
 #include <immintrin.h>
 #endif
 
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
+#include <arm_neon.h>
+#endif
+
 #include <cassert>
 #include <climits>
 #include <cstdint>
 #include <cstring>
 #include <initializer_list>
 #include <type_traits>
-#include <iostream>
 
 namespace halftime_hash {
 
@@ -78,8 +81,6 @@ struct BlockWrapper256 {
 #endif
 
 #if defined(__ARM_NEON) || defined(__ARM_NEON__)
-
-#include <arm_neon.h>
 
 using u128 = uint64x2_t;
 
