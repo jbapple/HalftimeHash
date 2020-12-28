@@ -64,7 +64,9 @@ inline uint64_t Sum(u256 a) {
   auto c = _mm256_extracti128_si256(a, 0);
   auto d = _mm256_extracti128_si256(a, 1);
   c = _mm_add_epi64(c, d);
-  return _mm_extract_epi64(c, 0) + _mm_extract_epi64(c, 1);
+  static_assert(sizeof(c[0]) == sizeof(uint64_t), "u256 too granular");
+  static_assert(sizeof(c) == 2 * sizeof(uint64_t), "u256 too granular");
+  return c[0] + c[1];
 }
 
 struct BlockWrapper256 {
@@ -88,7 +90,7 @@ inline u128 LeftShift(u128 a, int i) { return vshlq_s64(a, vdupq_n_s64(i)); }
 inline u128 Plus(u128 a, u128 b) { return vaddq_s64(a, b); }
 inline u128 Minus(u128 a, u128 b) { return vsubq_s64(a, b); }
 inline u128 Plus32(u128 a, u128 b) { return vaddq_s32(a, b); }
-inline u128 RightShift32(u128 a) { return vshlq_u64(a, vdupq_n_s64(-32)); }
+inline u128 RightShift32(u128 a) { return vshrq_n_u64(a, 32); }
 
 inline u128 Times(u128 a, u128 b) {
   uint32x2_t a_lo = vmovn_u64(a);
@@ -135,7 +137,7 @@ static inline u128 Negate(u128 a) {
   return Minus(zero, a);
 }
 
-inline uint64_t Sum(u128 a) { return _mm_extract_epi64(a, 0) + _mm_extract_epi64(a, 1); }
+inline uint64_t Sum(u128 a) { return a[0] + a[1]; }
 
 struct BlockWrapper128 {
   using Block = u128;
@@ -167,7 +169,7 @@ inline uint64_t Plus32(uint64_t a, uint64_t b) {
 }
 
 inline uint64_t Times(uint64_t a, uint64_t b) {
-  constexpr uint64_t mask = (1ul << 32) - 1;
+  constexpr uint64_t mask = (((uint64_t)1) << 32) - 1;
   return (a & mask) * (b & mask);
 }
 
@@ -183,6 +185,18 @@ struct BlockWrapperScalar {
 
   static uint64_t LoadOne(uint64_t entropy) { return entropy; }
 };
+
+template <typename T>
+T MultiplyAdd(T summand, T factor1, T factor2) {
+  return Plus(summand, Times(factor1, factor2));
+}
+
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
+template <>
+u128 MultiplyAdd(u128 summand, u128 factor1, u128 factor2) {
+  return vmlal_u32(summand, vmovn_u64(factor1), vmovn_u64(factor2));
+}
+#endif
 
 template <typename Block>
 inline void Encode3(Block raw_io[9 * 3]) {
@@ -368,17 +382,24 @@ template <typename BlockWrapper, unsigned dimension, unsigned in_width,
           unsigned encoded_dimension, unsigned out_width, unsigned fanout = 8>
 struct EhcBadger {
   using Block = typename BlockWrapper::Block;
-  static_assert(alignof(Block) == sizeof(Block), "alignof(Block) == sizeof(Block)");
 
-  static Block Mix(Block input, Block entropy) {
+  static Block Mix(Block accum, Block input, Block entropy) {
+    Block output = Plus32(entropy, input);
+    Block twin = RightShift32(output);
+    output = MultiplyAdd(accum, output, twin);
+    return output;
+  }
+
+  static Block MixOne(Block accum, Block input, uint64_t entropy) {
+    return Mix(accum, input, BlockWrapper::LoadOne(entropy));
+  }
+
+  static Block MixNone(Block input, uint64_t entropy_word) {
+    Block entropy = BlockWrapper::LoadOne(entropy_word);
     Block output = Plus32(entropy, input);
     Block twin = RightShift32(output);
     output = Times(output, twin);
     return output;
-  }
-
-  static Block MixOne(Block input, uint64_t entropy) {
-    return Mix(input, BlockWrapper::LoadOne(entropy));
   }
 
   static void EhcUpperLayer(const Block (&input)[fanout][out_width],
@@ -387,8 +408,7 @@ struct EhcBadger {
     for (unsigned i = 0; i < out_width; ++i) {
       output[i] = input[0][i];
       for (unsigned j = 1; j < fanout; ++j) {
-        output[i] =
-            Plus(output[i], MixOne(input[j][i], entropy[(fanout - 1) * i + j - 1]));
+        output[i] = MixOne(output[i], input[j][i], entropy[(fanout - 1) * i + j - 1]);
       }
     }
   }
@@ -486,12 +506,12 @@ struct EhcBadger {
                    const uint64_t entropy[encoded_dimension][in_width],
                    Block output[encoded_dimension]) {
     for (unsigned i = 0; i < encoded_dimension; ++i) {
-      output[i] = MixOne(input[i][0], entropy[i][0]);
+      output[i] = MixNone(input[i][0], entropy[i][0]);
       // TODO: should loading take care of this?
     }
     for (unsigned j = 1; j < in_width; ++j) {
       for (unsigned i = 0; i < encoded_dimension; ++i) {
-        output[i] = Plus(output[i], MixOne(input[i][j], entropy[i][j]));
+        output[i] = MixOne(output[i], input[i][j], entropy[i][j]);
         // TODO: this might be optional; it might not matter which way we iterate over
         // entropy
       }
@@ -549,7 +569,7 @@ struct EhcBadger {
 
     void Insert(const Block (&x)[out_width]) {
       for (unsigned i = 0; i < out_width; ++i) {
-        accum[i] = Plus(accum[i], Mix(x[i], BlockWrapper::LoadBlock(seeds)));
+        accum[i] = Mix(accum[i], x[i], BlockWrapper::LoadBlock(seeds));
         seeds += sizeof(Block) / sizeof(uint64_t);
       }
     }
@@ -557,8 +577,8 @@ struct EhcBadger {
     void Insert(Block x) {
       for (unsigned i = 0; i < out_width; ++i) {
         accum[i] =
-            Plus(accum[i], Mix(x, BlockWrapper::LoadBlock(
-                                      &seeds[i * sizeof(Block) / sizeof(uint64_t)])));
+            Mix(accum[i], x,
+                BlockWrapper::LoadBlock(&seeds[i * sizeof(Block) / sizeof(uint64_t)]));
       }
       // Toeplitz
       seeds += sizeof(Block) / sizeof(uint64_t);
@@ -759,15 +779,12 @@ void Hash(const uint64_t* entropy, const char* char_input, size_t length,
 
 template <typename Block, unsigned count>
 struct alignas(sizeof(Block) * count) Repeat {
-  static_assert(sizeof(Block) == alignof(Block), "sizeof(Block) == alignof(Block)");
   Block it[count];
 };
 
 template <typename InnerBlockWrapper, unsigned count>
 struct RepeatWrapper {
   using InnerBlock = typename InnerBlockWrapper::Block;
-  static_assert(sizeof(InnerBlock) == alignof(InnerBlock),
-                "sizeof(InnerBlock) == alignof(InnerBlock)");
 
   using Block = Repeat<InnerBlock, count>;
 
@@ -1101,7 +1118,7 @@ SPECIALIZE_4(1, Scalar)
 constexpr size_t kEntropyBytesNeeded =
     256 * 3 * sizeof(uint64_t) * sizeof(uint64_t) +
     advanced::GetEntropyBytesNeeded<
-        advanced::RepeatWrapper<advanced::BlockWrapperScalar, 8>, 2>(~0ull);
+        advanced::RepeatWrapper<advanced::BlockWrapperScalar, 8>, 2>(~0ul);
 
 inline uint64_t HalftimeHashStyle512(
     const uint64_t entropy[kEntropyBytesNeeded / sizeof(uint64_t)], const char input[],
