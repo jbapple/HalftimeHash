@@ -77,7 +77,7 @@ struct BlockWrapper256 {
 
 #endif
 
-#if defined(__ARM_ARCH)
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
 
 #include <arm_neon.h>
 
@@ -971,7 +971,7 @@ inline void V4Sse2(const uint64_t* entropy, const char* char_input, size_t lengt
 
 #endif
 
-#if defined(__ARM_ARCH)
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
 
 template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
           unsigned out_width>
@@ -1079,7 +1079,7 @@ SPECIALIZE_4(3, Sse2)
 SPECIALIZE_4(2, Sse2)
 SPECIALIZE_4(1, Scalar)
 
-#elif defined(__ARM_ARCH)
+#elif defined(__ARM_NEON) || defined(__ARM_NEON__)
 
 SPECIALIZE_4(4, Neon)
 SPECIALIZE_4(3, Neon)
