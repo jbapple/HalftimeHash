@@ -82,7 +82,7 @@
 \orcid{0000-0002-8685-9451}
 \email{jbapple@apache.org}
 
-\hypersetup{draft}
+%\hypersetup{draft}
 
 \begin{document}
 %\thispagestyle{fancyplain}
@@ -177,7 +177,8 @@ It also surpasses the performance of other high-performance string hashing algor
   \label{smhasher-speed}
     Some variants of HalftimeHash are faster than the fastest hash functions in the SMHasher suite, even ones that come with no AU guarantees. \protect\cite{smhasher}
     MeowHash128 and xxh128 produce 128 output bits, all other SMHasher functions produce 64 bits.
-    HalftimeHash24 produces 192 output bits, HalftimeHash32 produces 256 bits, and HalftimeHash40 produces 320 bits.
+    HalftimeHash16 produces 128 output bits, HalftimeHash24 produces 192 output bits, HalftimeHash32 produces 256 bits, and HalftimeHash40 produces 320 bits.
+    Of the functions here, only HalftimeHash and xxh128 pass all SMHasher tests.
 }
 
 
@@ -912,6 +913,8 @@ HalftimeHash can vary over three dimensions:
 
 A small sample of these are presented here, focused on large block sizes and ISA's with at least AVX2.
 
+In addition to the performance testing here, HalftimeHash passes all correctness tests in the SMHasher test suite.\cite{smhasher}
+
 \subsection{Throughput vs. output entropy}
 
 Figure \ref{frontier} displays the tension between higher output entropy and higher throughput for 250KB strings.
@@ -941,7 +944,7 @@ Three frontiers emerge, in which HalftimeHash always has better performance and 
 
 Figure \ref{output-variants} shows the variation of HalftimeHash throughput between output variants across input sizes.
 
-\includegraphics[width=8cm]{gcc-local-hh4.eps}
+\includegraphics[width=8cm]{clang-local-hh4.eps}
 \captionof{figure}{
   \label{output-variants}
   Different output widths of HalftimeHash.

@@ -20,15 +20,16 @@ export DIRECTORY='HalftimeHash' &&
 export INSTANCE_TYPE=$(curl http://169.254.169.254/latest/dynamic/instance-identity/document 2>/dev/null | grep instanceType 2>/dev/null | cut -d '"' -f 4) &&
 sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test &&
 sudo apt-get update &&
-sudo apt --yes install gcc-10 g++-10 make git awscli emacs &&
-sudo apt --yes install clang-10 cmake
+sudo apt --yes install gcc-10 g++-10 make git awscli emacs
 
+sudo apt --yes install clang-10 cmake
 git clone https://github.com/jbapple/smhasher-1 smhasher
 cd smhasher
 git submodule update --init --recursive
-#wget https://apt.llvm.org/llvm.sh &&
-#chmod +x llvm.sh &&
-#sudo ./llvm.sh 11 &&
+
+wget https://apt.llvm.org/llvm.sh &&
+chmod +x llvm.sh &&
+sudo ./llvm.sh 11
 
 #flax vector-conversions
 
@@ -36,11 +37,14 @@ git clone $REPO $DIRECTORY &&
 cd $DIRECTORY &&
 git checkout $BRANCH &&
 git submodule update --init --recursive &&
-export COMMIT=$(git rev-parse --short HEAD) &&
-export CC=clang-10 &&
-export CXX=clang++-10
+export COMMIT=$(git rev-parse --short HEAD)
 
 
+#export CC=clang-10 &&
+#export CXX=clang++-10
+
+export CC=clang-11 &&
+export CXX=clang++-11
 
 make -k -j$(nproc) benchmark.exe >/dev/null &&
 date &&
@@ -48,6 +52,8 @@ date &&
 date &&
 aws s3 cp $INSTANCE_TYPE-$CC-$COMMIT.txt s3://halftime-hash/ &&
 date &&
+
+
 make clean >/dev/null &&
 export CC=gcc-10 &&
 export CXX=g++-10 &&

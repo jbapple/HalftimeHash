@@ -28,7 +28,7 @@ set grid
 set output 'amd-16.eps'
 set yrange[*:55]
 set xrange[*:*]
-plot './c5a.large-clang-11-22bd15d.txt' using 1:3 with lines, './c5a.large-clang-11-22bd15d.txt' using 1:7 pt 6
+plot './c5a.large-clang-11-604af20.txt' using 1:3 with lines, '' using 1:4 pt 6
 
 set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
 unset title
@@ -112,10 +112,10 @@ set logscale x
 unset format y
 set format x '10^{%L}'
 set grid
-set output 'gcc-local-hh4.eps'
+set output 'clang-local-hh4.eps'
 set yrange[*:90]
 set xrange[*:*]
-plot for [i=3:6] './adu-full-001.txt' using 1:i with lines
+plot for [i=3:6] './simpler-k2-multipliers-002.txt' using 1:i with lines
 
 set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
 set title "SMhasher speed tests"

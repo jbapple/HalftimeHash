@@ -1,7 +1,7 @@
 .PHONY: all clean
 
 all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe \
-	line-cl-hh24.eps amd-16.eps gcc-local-hh4.eps test-read-each-byte.exe \
+	line-cl-hh24.eps amd-16.eps clang-local-hh4.eps test-read-each-byte.exe \
 	test-read-each-byte.debug-exe no-collisions.exe no-collisions.debug-exe \
 	smhasher-speed.eps test-bytes-needed.exe example.exe
 
@@ -41,13 +41,13 @@ umash/umash.o: umash/umash.c deny-list.txt Makefile
 amd-16.eps: plateau-008.txt points-example.txt smhasher-speed.txt plot.gnu Makefile
 	gnuplot plot.gnu
 
-smhasher-speed.eps line-cl-hh24.eps speed-v-epsilon.eps amd-cl-hh24.eps gcc-local-hh4.eps: plateau-008.txt points-example.txt plot.gnu amd-16.eps Makefile
+smhasher-speed.eps line-cl-hh24.eps speed-v-epsilon.eps amd-cl-hh24.eps clang-local-hh4.eps: plateau-008.txt points-example.txt plot.gnu amd-16.eps Makefile
 
 clean: Makefile
 	rm -f Diagram2.eps
 	rm -f random-combiners.exe
 	rm -f speed-v-epsilon.eps
-	rm -f gcc-local-hh4.eps
+	rm -f clang-local-hh4.eps
 	rm -f amd-16.eps
 	rm -f amd-24.eps
 	rm -f amd-cl-hh24.eps

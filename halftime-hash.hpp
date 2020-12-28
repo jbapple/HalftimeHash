@@ -201,10 +201,10 @@ inline void Encode3(Block raw_io[9 * 3]) {
     }
   };
 
-  auto Distribute3 = [&iter, DistributeRaw](unsigned idx,
-                                            std::initializer_list<unsigned> a,
-                                            std::initializer_list<unsigned> b,
-                                            std::initializer_list<unsigned> c) {
+  auto Distribute3 = [&iter, DistributeRaw, x, y, z](unsigned idx,
+                                                     std::initializer_list<unsigned> a,
+                                                     std::initializer_list<unsigned> b,
+                                                     std::initializer_list<unsigned> c) {
     DistributeRaw(idx, x, a);
     DistributeRaw(idx, y, b);
     DistributeRaw(idx, z, c);
@@ -255,10 +255,10 @@ inline void Encode4(Block raw_io[10 * 3]) {
     }
   };
 
-  auto Distribute3 = [&iter, DistributeRaw](unsigned idx,
-                                            std::initializer_list<unsigned> a,
-                                            std::initializer_list<unsigned> b,
-                                            std::initializer_list<unsigned> c) {
+  auto Distribute3 = [&iter, DistributeRaw, x, y, z](unsigned idx,
+                                                     std::initializer_list<unsigned> a,
+                                                     std::initializer_list<unsigned> b,
+                                                     std::initializer_list<unsigned> c) {
     DistributeRaw(idx, x, a);
     DistributeRaw(idx, y, b);
     DistributeRaw(idx, z, c);
@@ -310,10 +310,10 @@ inline void Encode5(Block raw_io[9 * 3]) {
     }
   };
 
-  auto Distribute3 = [&iter, DistributeRaw](unsigned idx,
-                                            std::initializer_list<unsigned> a,
-                                            std::initializer_list<unsigned> b,
-                                            std::initializer_list<unsigned> c) {
+  auto Distribute3 = [&iter, DistributeRaw, x, y, z](unsigned idx,
+                                                     std::initializer_list<unsigned> a,
+                                                     std::initializer_list<unsigned> b,
+                                                     std::initializer_list<unsigned> c) {
     DistributeRaw(idx, x, a);
     DistributeRaw(idx, y, b);
     DistributeRaw(idx, z, c);
