@@ -529,26 +529,49 @@ struct EhcBadger {
     Combine(tmpout, output);
   }
 
-  static void DfsTreeHash(const char* data, size_t block_group_length,
+  static void EhcSweepLayer(unsigned input_size,
+                            const Block input[][out_width],
+                            const uint64_t entropy[out_width * (fanout - 1)],
+                            Block (&output)[out_width]) {
+    for (unsigned i = 0; i < out_width; ++i) {
+      output[i] = input[0][i];
+      for (unsigned j = 1; j < input_size; ++j) {
+        output[i] = MixOne(output[i], input[j][i], entropy[(fanout - 1) * i + j - 1]);
+      }
+    }
+  }
+
+  static void Carry(int start, Block stack[][fanout][out_width], int stack_lengths[],
+                    const uint64_t* entropy) {
+    int i = start;
+    while (stack_lengths[i] == fanout) ++i;
+    for (int j = i - 1; j >= 0; --j) {
+      EhcUpperLayer(stack[j], &entropy[(fanout - 1) * out_width * j],
+                    stack[j + 1][stack_lengths[j + 1]]);
+      stack_lengths[j] = 0;
+      stack_lengths[j + 1] += 1;
+    }
+  }
+
+  // Returns the stack level all the remaining data is in. Be sure to check stack_lengths!
+  static int DfsTreeHash(const char* data, size_t block_group_length,
                           Block stack[][fanout][out_width], int stack_lengths[],
                           const uint64_t* entropy) {
     auto entropy_matrix = reinterpret_cast<const uint64_t(*)[in_width]>(entropy);
+    entropy += encoded_dimension * in_width;
     for (size_t k = 0; k < block_group_length; ++k) {
-      int i = 0;
-      while (stack_lengths[i] == fanout) ++i;
-      for (int j = i - 1; j >= 0; --j) {
-        EhcUpperLayer(
-            stack[j],
-            &entropy[encoded_dimension * in_width + (fanout - 1) * out_width * j],
-            stack[j + 1][stack_lengths[j + 1]]);
-        stack_lengths[j] = 0;
-        stack_lengths[j + 1] += 1;
-      }
-
+      Carry(0, stack, stack_lengths, entropy);
       EhcBaseLayer(&data[k * dimension * in_width * sizeof(Block)], entropy_matrix,
                    stack[0][stack_lengths[0]]);
       stack_lengths[0] += 1;
     }
+    int i = 0;
+    for (; stack_lengths[i + 1] > 0; ++i) {
+      Carry(i, stack, stack_lengths, entropy + (fanout - 1) * out_width * i);
+      EhcSweepLayer(stack_lengths[i], stack[i], &entropy[(fanout - 1) * out_width * i],
+                    stack[i + 1][stack_lengths[i + 1]]);
+    }
+    return i + 1;
   }
 
   static constexpr size_t GetEntropyBytesNeeded(size_t n) {
@@ -592,14 +615,12 @@ struct EhcBadger {
   };
 
   static void DfsGreedyFinalizer(const Block stack[][fanout][out_width],
-                                 const int stack_lengths[], const char* char_input,
-                                 size_t char_length, const uint64_t* entropy,
-                                 uint64_t output[out_width]) {
+                                 const int stack_lengths[], int last_stack,
+                                 const char* char_input, size_t char_length,
+                                 const uint64_t* entropy, uint64_t output[out_width]) {
     BlockGreedy b(entropy);
-    for (int j = 0; stack_lengths[j] > 0; ++j) {
-      for (int k = 0; k < stack_lengths[j]; k += 1) {
-        b.Insert(stack[j][k]);
-      }
+    for (int k = 0; k < stack_lengths[last_stack]; k += 1) {
+      b.Insert(stack[last_stack][k]);
     }
 
     size_t i = 0;
@@ -765,7 +786,7 @@ void Hash(const uint64_t* entropy, const char* char_input, size_t length,
   int stack_lengths[kMaxStackSize] = {};
   size_t wide_length = length / sizeof(Block) / (dimension * in_width);
 
-  EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension, out_width,
+  int last_stack = EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension, out_width,
             kFanout>::DfsTreeHash(char_input, wide_length, stack, stack_lengths, entropy);
   entropy += encoded_dimension * in_width + out_width * (kFanout - 1) * kMaxStackSize;
 
@@ -773,7 +794,7 @@ void Hash(const uint64_t* entropy, const char* char_input, size_t length,
   char_input += used_chars;
 
   EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension, out_width,
-            kFanout>::DfsGreedyFinalizer(stack, stack_lengths, char_input,
+            kFanout>::DfsGreedyFinalizer(stack, stack_lengths, last_stack, char_input,
                                          length - used_chars, entropy, output);
 }
 

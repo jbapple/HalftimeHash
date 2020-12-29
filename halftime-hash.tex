@@ -534,8 +534,11 @@ First, the tree hash leaves data in its stack - as much as $bf$ words of data pe
 
 In addition to the data on the stack, there are some characters that have yet to be hashed at all since HalftimeHash's EHC design expects to be fed $7 \cdot 3 = 21$ words at each invocation, and no fewer, so there are words remaining at the end of the input string.
 
+To handle the data in the stack, HalftimeHash first completes the tree (see Figure \ref{tree}) by passing data through each level by an application of NH on each level, whether full or only partially full.
+This leaves a single level left to hash.
+
 HalftimeHash uses three NH hash applications to complete the operation.
-First, it feeds every hash value in the three stacks to the corresponding NH execution.
+First, it feeds every hash value in the remaining stack level to the corresponding NH execution.
 Second, it feeds every character in the remainder of the input string into {\em all three} NH executions.
 %% For both, HalftimeHash uses the A$\Delta$U version of NH.
 
