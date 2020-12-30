@@ -33,8 +33,6 @@ wget https://apt.llvm.org/llvm.sh &&
 chmod +x llvm.sh &&
 sudo ./llvm.sh 11
 
-#flax vector-conversions
-
 git clone $REPO $DIRECTORY &&
 cd $DIRECTORY &&
 git checkout $BRANCH &&

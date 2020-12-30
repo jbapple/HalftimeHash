@@ -8,11 +8,13 @@ all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe \
 RELEASE_FLAGS = -ggdb3 -O3 -march=native -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -DNDEBUG \
 	-Wno-comment -Wno-ignored-attributes -Wno-constant-conversion \
+	-Wno-unused-lambda-capture
 	# -fsanitize=memory -fsanitize-blacklist=deny-list.txt #-stdlib=libc++
 
 DEBUG_FLAGS = -ggdb3 -O0 -march=native -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -UNDEBUG \
 	-Wno-comment -Wno-ignored-attributes -Wno-constant-conversion \
+	-Wno-unused-lambda-capture
 
 CXX_RELEASE_FLAGS = $(RELEASE_FLAGS) -std=c++14 #-stdlib=libc++
 CXX_DEBUG_FLAGS = $(DEBUG_FLAGS) -std=c++14 #-stdlib=libc++

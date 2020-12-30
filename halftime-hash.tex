@@ -175,10 +175,10 @@ It also surpasses the performance of other high-performance string hashing algor
 \includegraphics[width=8cm]{smhasher-speed.eps}
 \captionof{figure}{
   \label{smhasher-speed}
-    Some variants of HalftimeHash are faster than the fastest hash functions in the SMHasher suite, even ones that come with no AU guarantees. \protect\cite{smhasher}
+    Some variants of HalftimeHash are faster than the fastest hash families in the SMHasher suite on a CPU with AVX-512 instructions, even families that come with no AU guarantees. \protect\cite{smhasher}
     MeowHash128 and xxh128 produce 128 output bits, all other SMHasher functions produce 64 bits.
     HalftimeHash16 produces 128 output bits, HalftimeHash24 produces 192 output bits, HalftimeHash32 produces 256 bits, and HalftimeHash40 produces 320 bits.
-    Of the functions here, only HalftimeHash and xxh128 pass all SMHasher tests.
+    Of the families here, only HalftimeHash and xxh128 pass all SMHasher tests.
 }
 
 
@@ -404,8 +404,8 @@ For $k \in \{2, 4, 5\}$, HalftimeHash uses
 \[
 \left(
 \begin{array}{rrrrrrrrrrrr}
-  1 & 0 & 1 & 1 & 1 & 2 & -1 & 2 & 1 & 1 & 4 & 1\\
-  0 & 1 & 1 & -1 & 2 & 1 & 1 & -1 & 3 & 4 & 1 & 5
+  1 & 0 & 1 & 1 & 2 & 1 & 4\\
+  0 & 1 & 1 & 2 & 1 & 4 & 1
 \end{array}
 \right)
 \]
