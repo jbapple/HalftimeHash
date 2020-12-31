@@ -26,6 +26,7 @@
 %\usepackage{newpxtext}
 %\usepackage{verbatim}
 %\usepackage{cleveref}
+\usepackage{balance}
 
 
 %% The following content must be adapted for the final version
@@ -129,11 +130,19 @@ A hash family $H$ is called is $\varepsilon$-almost universal (``$\varepsilon$-A
 \[\forall x,y \in D, x \neq y \implies \mathrm{Pr}_{s \in S}[H(s, x) = H(s, y)] \leq \varepsilon\]
 The intuition behind this definition is that the input to be hashed might not be random, but collisions can still be made unlikely by picking randomly from a hash {\em family}, rather than anchoring on a specific hash {\em function} that maps from $D$ to $C$ but does not take a seed as an input.
 
-HalftimeHash is a new hash family designed for
+AU hash families are useful in hash tables, where collisions slow down operations and, in extreme cases, can turn linear algorithms into quadratic ones. \cite{tabulation,rust-quadratic,impala-quadratic}
+
+HalftimeHash is new a ``universe collapsing'' hash family, designed to hash long strings into short ones. \cite{linear-hash-functions,hashing-without-primes-revisited,cuckoo-journal}
+This differs from short-input families like SipHash, suitable for hashing short strings down to 64 bits, or general purpose families like UMASH, suitable for hashing strings of any length down to 64 bits.
+Universe collapsing families are especially suitable for composition with short-input families: when $n$ items are to be handled by a hash-based algorithm, even if they are very long, a universe-collapsing family that reduces them to hash values of length $c \lg n$ bits for some suitable $c \geq 3$ produces no collisions with high probability.\footnote{$1-O(n^{2-c})$}
+A short-input hash family can then treat the hashed values as if they were the original distinct input values. \cite{universe-collapse-linear-probing,siphash,tabulation,simple-hash-functions-work}
+This technique applies not only to hash tables, but also to message-authentication codes, load balancing in distributed systems, privacy amplification, randomized geometric algorithms, Bloom filters, and randomness extractors. \cite{poly1305,chord,privacy-amplification,random-closest-pair,simple-hash-functions-work,fuzzy-extractors}
+
+HalftimeHash is designed for:
 
 \begin{enumerate}
 \item High speed on long strings.
-  Combining HalftimeHash with a hash family that is designed with short strings in mind can yield a hash family that performs better than either one in isolation. \cite{siphash,umash}
+%  Combining HalftimeHash with a hash family that is designed with short strings in mind can yield a hash family that performs better than either one in isolation. \cite{siphash,umash}
 \item A simple implementation that is easily portable between programming languages and machine ISA's.
 \item Tunable output length for applications that require it, such as one-time authorization. \cite{nacl}
 \end{enumerate}
@@ -143,15 +152,16 @@ For HalftimeHash, the family parameters are:
 \begin{description}
 \item[Domain $D$] consists of all strings of size less than $2^{64}$ bytes.
 \item[Codomain $C$] is 16, 24, 32, or 40 bytes.
-  These are easily expanded to larger sizes.
-\item[Collision probability $\varepsilon$] is less than than $2^{-83}$ bits for input shorter than one exabyte (for the family producing 24 bytes of output), with shorter strings producing lower collision probability.
+%  These are easily expanded to larger sizes.
+\item[Collision probability $\varepsilon$] is less than than $2^{-83}$ bits for input shorter than one exabyte (for the family producing 24 bytes of output).
+  Shorter input strings produce lower collision probability, as do longer output strings (32 or 40 bytes).
 \item[Seeds $S$] are larger for longer strings in the domain, but are less than 34KB for strings as long as a exabyte.
 \end{description}
 
-HalftimeHash is a ``universe collapsing'' function, designed to hash long strings into short ones. \cite{linear-hash-functions,hashing-without-primes-revisited,cuckoo-journal}
-This differs from short-input families like SipHash, suitable for hashing short strings down to 64 bits, or general purpose families like UMASH, suitable for hashing strings of any length down to 64 bits.
-Universe collapsing functions are especially suitable for pairing with short-input families: when $n$ items are to be handled by a hash-based algorithm, even if they are very long, a universe-collapsing function that reduces them to hash values of length $c \lg n$ bits for some suitable $c \geq 3$ produces no collisions with high probability.
-Short-input/short-output families can then be used on those $c \lg n$ bits. \cite{universe-collapse-linear-probing,siphash,tabulation,simple-hash-functions-work}
+On strings longer than 1KB, HalftimeHash is typically 55\% faster than clhash, the AU hash family that comes closest in performance to HalftimeHash.
+HalftimeHash uses less than 1200 lines of code in C++, does not use any assembly, and makes spare use of the C++ standard library.
+It can take advantage of vector ISA extensions like AVX-512, AVX2, and SSE from the x86-64 architecture, and NEON from the ARM architecture, but it can also run on the C++ virtual machine model with no architecture-specific features.
+It is a parameterized algorithm that supports straightforward creation of new versions with larger SIMD register sizes or longer output hash values.
 
 \subsection{Prior work}
 
@@ -162,26 +172,18 @@ Other previous work on AU hashing long strings is no longer as competitive, perf
 UHASH was designed specifically for SIMD speed, but it predates Nandi's breakthrough EHC algorithm as used in HalftimeHash and hard-codes the SIMD register width. \cite{umac,ehc-nandi}
 VHASH similarly came about before EHC and is an update to UHASH designed to take advantage of 64-bit architectures, and performs much better than UHASH, but still lags compared to the current fastest hash families. \cite{vmac,smhasher}
 
-\subsection{Results}
+% \subsection{Results}
 
-HalftimeHash uses less than 1000 lines of code in C++, does not use any assembly, and makes spare use of the C++ standard library.
-It can take advantage of vector ISA extensions like AVX-512, AVX2, and SSE, but it also runs on the C++ virtual machine model with no architecture-specific features.
-It is a parameterized algorithm that supports straightforward creation of new versions with larger SIMD register sizes or longer output hash values.
-On strings longer than 1KB, HalftimeHash is typically 55\% faster than clhash, the AU hash family that comes closest in performance to HalftimeHash.
-It also surpasses the performance of other high-performance string hashing algorithms that don't have AU guarantees such as Fast Positive Hash, falkhash, xxh3, and MeowHash.
 % TODO: graph this perf comparison with other non-universal families
-
 
 \includegraphics[width=8cm]{smhasher-speed.eps}
 \captionof{figure}{
   \label{smhasher-speed}
-    Some variants of HalftimeHash are faster than the fastest hash families in the SMHasher suite on a CPU with AVX-512 instructions, even families that come with no AU guarantees. \protect\cite{smhasher}
+    SomThe two fastest variants of HalftimeHash are faster than all hash families in the SMHasher suite on a CPU with AVX-512 instructions, even families that come with no AU guarantees. \protect\cite{smhasher}
     MeowHash128 and xxh128 produce 128 output bits, all other SMHasher functions produce 64 bits.
     HalftimeHash16 produces 128 output bits, HalftimeHash24 produces 192 output bits, HalftimeHash32 produces 256 bits, and HalftimeHash40 produces 320 bits.
     Of the families here, only HalftimeHash and xxh128 pass all SMHasher tests.
 }
-
-
 
 \section{Notations and Conventions}
 
@@ -923,15 +925,6 @@ Nandi showed that this is true in the general case, as there is a matching upper
 
 Three frontiers emerge, in which HalftimeHash always has better performance and lower collision probability than clhash, and clhash similarly dominates UMASH.
 
-\includegraphics[width=8cm]{speed-v-epsilon.eps}
-\captionof{figure}{
-  \label{frontier}
-  Trade-offs for almost-universal string hashing functions on strings of size 250KB on an i7-7800x with AVX-512.
-  The upper right corner is ideal: low execution time and low collision probability.
-  Note that the clhash and UMASH executions are not along the efficient frontier / layer-of-maxima, in that for each clhash / UMASH version, at least one version of HalftimeHash is faster and has lower collision probability. \protect\cite{layer-of-maxima}
-  This contrasts with the case of short strings, where clhash and UMASH have better performance.
-}
-
 %% The configuration matrix consists of four block sized, from 64 to 512 bits, 
 
 %% Another variant of HalftimeHash varies based on the block width.
@@ -950,6 +943,15 @@ Figure \ref{output-variants} shows the variation of HalftimeHash throughput betw
   Different output widths of HalftimeHash.
   %Note that even the family with the longest output of 40 bytes is compet than clhash and UMASH; see Figure \protect\ref{frontier}.
   The sharp drops in performance correspond to the L2 and L3 data cache sizes.
+}
+
+\includegraphics[width=8cm]{speed-v-epsilon.eps}
+\captionof{figure}{
+  \label{frontier}
+  Trade-offs for almost-universal string hashing functions on strings of size 250KB on an i7-7800x with AVX-512.
+  The upper right corner is ideal: low execution time and low collision probability.
+  Note that the clhash and UMASH executions are not along the efficient frontier / layer-of-maxima, in that for each clhash / UMASH version, at least one version of HalftimeHash is faster and has lower collision probability. \protect\cite{layer-of-maxima}
+  This contrasts with the case of short strings, where clhash and UMASH have better performance.
 }
 
 Figure \ref{vs-cl} adds comparisons between clhash, UMASH, and HalftimeHash across input sizes and ISA's.
@@ -998,15 +1000,19 @@ Figure \ref{block-size} shows how the smaller block size performs better on the 
 
 \section{Future work}
 
-HalftimeHash is a fast family for strings that are more than 1KB in size.
-Above was pondered combining HalftimeHash with hash families designed for shorter strings.
-The details of that combination remain future work.
+Future potential work includes:
 
-Additionally, HalftimeHash depends on platforms supporting multiplication of two 32-bit integers that produces a 64-bit integer.
-This operation is present in many environments, but not all.
-Notable exceptions include some embedded platforms that do not support widening multiplication of two 32-bit integers and native JavaScript, which only supports 53-bit integers.
-
-More detailed comparisons against hash algorithms written for speed and executed in the Linux kernel, including Poly1305 and \texttt{crc32\_pclmul\_le\_16} could also be a fruitful direction for future work.
+\begin{enumerate}
+\item HalftimeHash is a fast family for strings that are more than 1KB in size.
+  Above was pondered combining HalftimeHash with hash families designed for shorter strings.
+  The details of that combination remain future work.
+\item HalftimeHash depends on platforms supporting widening multiplication of two 32-bit integers that produces a 64-bit integer.
+  This operation is present in many environments, but not all.
+  Notable exceptions include some embedded platforms that do not support {\em widening} multiplication of two 32-bit integers as well as native JavaScript, which does not support 64 bit integers at all.
+\item The size of the keys used in HalftimeHash can be lowered by using the Badger pass-through mechanism on the data left in the stack after DFS traversal.
+  It could also be reduced by apply HalftimeHash recursively, with smaller block sizes, on the leftover data in the input string after the DFS traversal.
+\item More detailed comparisons against hash algorithms written for speed and executed in the Linux kernel, including Poly1305 and \texttt{crc32\_pclmul\_le\_16} could also be a fruitful direction for future work, as could comparisons on POWER and ARM ISA's.
+\end{enumerate}
 
 %TODO: multi-threading
 
@@ -1015,9 +1021,9 @@ More detailed comparisons against hash algorithms written for speed and executed
 %\lstinputlisting{narrow-code/halftime-hash-basic.c}
 
 \begin{acks}
-Thanks to Daniel Lemire and Paul Khuong for helpful discussions.
+Thanks to Daniel Lemire, Paul Khuong, and Guy Even for helpful discussions and feedback.
 \end{acks}
-
+\balance
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{library}

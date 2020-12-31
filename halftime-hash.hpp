@@ -929,125 +929,49 @@ inline uint64_t TabulateAfter(const uint64_t* entropy, const char* char_input,
   return result;
 }
 
+#define HASH_WRAP(isa, block)                                                         \
+  template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,        \
+            unsigned out_width>                                                       \
+  inline void isa(const uint64_t* entropy, const char* char_input, size_t length, \
+                      uint64_t output[out_width]) {                                   \
+    return Hash<block, dimension, in_width, encoded_dimension, out_width>(  \
+        entropy, char_input, length, output);                                         \
+  }
+
+#define HASH_WRAP_REPEAT(isa, block, count)                                          \
+  template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,       \
+            unsigned out_width>                                                      \
+  inline void isa(const uint64_t* entropy, const char* char_input, size_t length,    \
+                  uint64_t output[out_width]) {                                      \
+    return Hash<RepeatWrapper<block, count>, dimension, in_width, encoded_dimension, \
+                out_width>(entropy, char_input, length, output);                     \
+  }
+
 #if __AVX512F__
 
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V4Avx512(const uint64_t* entropy, const char* char_input, size_t length,
-                     uint64_t output[out_width]) {
-  return Hash<BlockWrapper512, dimension, in_width, encoded_dimension, out_width>(
-      entropy, char_input, length, output);
-}
+HASH_WRAP(V4Avx512, BlockWrapper512)
 
 #endif
 
 #if __AVX2__
 
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V3Avx2(const uint64_t* entropy, const char* char_input, size_t length,
-                   uint64_t output[out_width]) {
-  return Hash<BlockWrapper256, dimension, in_width, encoded_dimension, out_width>(
-      entropy, char_input, length, output);
-}
-
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V4Avx2(const uint64_t* entropy, const char* char_input, size_t length,
-                   uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapper256, 2>, dimension, in_width, encoded_dimension,
-              out_width>(entropy, char_input, length, output);
-}
+HASH_WRAP(V3Avx2, BlockWrapper256)
+HASH_WRAP_REPEAT(V4Avx2, BlockWrapper256, 2)
 
 #endif
 
-#if __SSE2__
+#if __SSE2__ || defined(__ARM_NEON) || defined(__ARM_NEON__)
 
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V2Sse2(const uint64_t* entropy, const char* char_input, size_t length,
-                   uint64_t output[out_width]) {
-  return Hash<BlockWrapper128, dimension, in_width, encoded_dimension, out_width>(
-      entropy, char_input, length, output);
-}
-
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V3Sse2(const uint64_t* entropy, const char* char_input, size_t length,
-                   uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapper128, 2>, dimension, in_width, encoded_dimension,
-              out_width>(entropy, char_input, length, output);
-}
-
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V4Sse2(const uint64_t* entropy, const char* char_input, size_t length,
-                   uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapper128, 4>, dimension, in_width, encoded_dimension,
-              out_width>(entropy, char_input, length, output);
-}
+HASH_WRAP(V2Sse2, BlockWrapper128)
+HASH_WRAP_REPEAT(V3Sse2, BlockWrapper128, 2)
+HASH_WRAP_REPEAT(V4Sse2, BlockWrapper128, 4)
 
 #endif
 
-#if defined(__ARM_NEON) || defined(__ARM_NEON__)
-
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V2Neon(const uint64_t* entropy, const char* char_input, size_t length,
-                   uint64_t output[out_width]) {
-  return Hash<BlockWrapper128, dimension, in_width, encoded_dimension, out_width>(
-      entropy, char_input, length, output);
-}
-
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V3Neon(const uint64_t* entropy, const char* char_input, size_t length,
-                   uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapper128, 2>, dimension, in_width, encoded_dimension,
-              out_width>(entropy, char_input, length, output);
-}
-
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V4Neon(const uint64_t* entropy, const char* char_input, size_t length,
-                   uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapper128, 4>, dimension, in_width, encoded_dimension,
-              out_width>(entropy, char_input, length, output);
-}
-
-#endif
-
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V4Scalar(const uint64_t* entropy, const char* char_input, size_t length,
-                     uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapperScalar, 8>, dimension, in_width,
-              encoded_dimension, out_width>(entropy, char_input, length, output);
-}
-
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V3Scalar(const uint64_t* entropy, const char* char_input, size_t length,
-                     uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapperScalar, 4>, dimension, in_width,
-              encoded_dimension, out_width>(entropy, char_input, length, output);
-}
-
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V2Scalar(const uint64_t* entropy, const char* char_input, size_t length,
-                     uint64_t output[out_width]) {
-  return Hash<RepeatWrapper<BlockWrapperScalar, 2>, dimension, in_width,
-              encoded_dimension, out_width>(entropy, char_input, length, output);
-}
-
-template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,
-          unsigned out_width>
-inline void V1Scalar(const uint64_t* entropy, const char* char_input, size_t length,
-                     uint64_t output[out_width]) {
-  return Hash<BlockWrapperScalar, dimension, in_width, encoded_dimension, out_width>(
-      entropy, char_input, length, output);
-}
+HASH_WRAP(V1Scalar, BlockWrapperScalar)
+HASH_WRAP_REPEAT(V2Scalar, BlockWrapperScalar, 2)
+HASH_WRAP_REPEAT(V3Scalar, BlockWrapperScalar, 4)
+HASH_WRAP_REPEAT(V4Scalar, BlockWrapperScalar, 8)
 
 template <unsigned out_width>
 inline void V4(const uint64_t* entropy, const char* char_input, size_t length,

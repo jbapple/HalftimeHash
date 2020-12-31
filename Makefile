@@ -28,16 +28,16 @@ export
 %.eps: %.dia Makefile
 	dia -e $@ $<
 
-umash/umash.o: umash/umash.c deny-list.txt Makefile
+umash/umash.o: umash/umash.c Makefile
 	$(CC) $(RELEASE_FLAGS) -o $@ $< -c
 
-%.exe: %.cc $(shell find -name '*.hpp' ) deny-list.txt umash/umash.o Makefile
+%.exe: %.cc $(shell find -name '*.hpp' ) umash/umash.o Makefile
 	$(CXX) $(CXX_RELEASE_FLAGS) -o $@ $< umash/umash.o
 
-%.exe: %.cpp $(shell find -name '*.hpp' ) deny-list.txt umash/umash.o Makefile
+%.exe: %.cpp $(shell find -name '*.hpp' ) umash/umash.o Makefile
 	$(CXX) $(CXX_RELEASE_FLAGS) -o $@ $< umash/umash.o
 
-%.debug-exe: %.cpp $(shell find -name '*.hpp' ) deny-list.txt umash/umash.o Makefile
+%.debug-exe: %.cpp $(shell find -name '*.hpp' ) umash/umash.o Makefile
 	$(CXX) $(CXX_DEBUG_FLAGS) -o $@ $< umash/umash.o
 
 amd-16.eps: plateau-008.txt points-example.txt smhasher-speed.txt plot.gnu Makefile
