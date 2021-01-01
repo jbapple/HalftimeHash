@@ -1,3 +1,23 @@
+set terminal postscript eps enhanced color size 7cm,7cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr10.pfb" "LMRoman10,10"
+set title "SMhasher speed tests"
+set ylabel "bytes per cycle"
+set key noautotitle
+set xtics rotate by -60
+set style fill solid noborder
+set boxwidth 0.75
+set rmargin 5
+set style data histogram
+set style histogram rowstacked
+unset logscale y
+unset logscale x
+set grid
+unset key
+set output 'smhasher-speed.eps'
+set yrange[8:*]
+set style fill
+plot 'smhasher-speed.txt' using 2:xtic(1), '' using 3
+unset style
+
 set terminal postscript eps enhanced color size 5,6 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
 set output 'speed-v-epsilon.eps'
 set ylabel 'bytes per nanosecond'
@@ -117,21 +137,3 @@ set yrange[*:90]
 set xrange[*:*]
 plot for [i=3:6] './simpler-k2-multipliers-002.txt' using 1:i with lines
 
-set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
-set title "SMhasher speed tests"
-set ylabel "bytes per cycle"
-set key noautotitle
-set xtics rotate by -60
-set style fill solid noborder
-set boxwidth 0.75
-set rmargin 5
-set style data histogram
-set style histogram rowstacked
-unset logscale y
-unset logscale x
-set grid
-unset key
-set output 'smhasher-speed.eps'
-set yrange[8:*]
-set style fill
-plot 'smhasher-speed.txt' using 2:xtic(1), '' using 3
