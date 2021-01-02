@@ -34,7 +34,8 @@ unset offsets
 set format x '%L'
 plot 'points-example.txt' using (1/column(2)):1:3 with labels point pt 7 offset char -1,1, '' using (1/column(5)):4:6 with labels point pt 7 offset char 2,-1
 
-set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
+set terminal postscript eps enhanced color size 6.4cm,6.4cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr17.pfb" "LMRoman17,17"
+#set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
 unset title
 unset offsets
 set xlabel 'input length in bytes'
@@ -51,7 +52,8 @@ set yrange[*:55]
 set xrange[*:*]
 plot './c5a.large-clang-11-604af20.txt' using 1:3 with lines, '' using 1:4 pt 6
 
-set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
+set terminal postscript eps enhanced color size 6.4cm,6.4cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr17.pfb" "LMRoman17,17"
+#set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
 unset title
 unset offsets
 set xlabel 'input length in bytes'
@@ -86,7 +88,8 @@ plot './c5a.large-clang-11-22bd15d.txt' using 1:4 with lines, './c5a.large-clang
 # set xrange[*:*]
 # plot './umash-001.txt' using 1:2 pt 6, '' using 1:3 with lines lw 10, '' using 1:4 with lines
 
-set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
+set terminal postscript eps enhanced color size 6.4cm,6.4cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr17.pfb" "LMRoman17,17"
+#set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
 set title 'i7-7800x'
 unset offsets
 set xlabel 'input length in bytes'
@@ -103,7 +106,8 @@ set yrange[*:80]
 set xrange[*:*]
 plot './adu-full-001.txt' using 1:4 pt 6, '' using 1:11 with lines lw 10, '' using 1:13 with lines
 
-set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
+set terminal postscript eps enhanced color size 6.4cm,6.4cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr17.pfb" "LMRoman17,17"
+#set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
 set title '7R32'
 unset offsets
 set xlabel 'input length in bytes'

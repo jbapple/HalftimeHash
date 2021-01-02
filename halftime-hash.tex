@@ -100,7 +100,7 @@ A hash family $H$ is called is $\varepsilon$-almost universal (``$\varepsilon$-A
 \[
 \forall x,y \in D, x \neq y \implies \mathrm{Pr}_{s \in S}[H(s, x) = H(s, y)] \leq \varepsilon \in o(1)
 \]
-The intuition behind this definition is that the input to be hashed might not be random, but collisions can still be made unlikely by picking randomly from a hash {\em family} independest of the input strings, rather than anchoring on a specific hash {\em function} that maps from $D$ to $C$ but does not take a seed as an input. AU hash families are useful in hash tables, where collisions slow down operations and, in extreme cases, can turn linear algorithms into quadratic ones. \cite{tabulation,rust-quadratic,impala-quadratic,algorithm-attack}
+The intuition behind this definition is that the input to be hashed might not be random, but collisions can still be made unlikely by picking randomly from a hash {\em family} independent of the input strings, rather than anchoring on a specific hash {\em function} that maps from $D$ to $C$ but does not take a seed as an input. AU hash families are useful in hash tables, where collisions slow down operations and, in extreme cases, can turn linear algorithms into quadratic ones. \cite{tabulation,rust-quadratic,impala-quadratic,algorithm-attack}
 
 HalftimeHash is new a ``universe collapsing'' hash family, designed to hash long strings into short ones. \cite{linear-hash-functions,hashing-without-primes-revisited,cuckoo-journal}
 This differs from short-input families like SipHash or tabulation hashing, which suitable for hashing short strings down to 64 bits. \cite{siphash,tabulation}
@@ -198,18 +198,18 @@ The central idea is called ``EHC'', for {\em Encode, Hash, Combine}. \cite{ehc-n
 The application of the erasure code adds ``minimum distance'' $d$, so that any two input values that differ in any location produce encoded outputs that differ in at least $d > 1$ locations.
 This decreases the probability of collisions by a factor of $\varepsilon^{d-1}$.
 
-%% \begin{figure}
-%% \includegraphics[width=\textwidth]{Diagram2.eps}
-%% \caption{
-%%   \label{tree}
-%%   A simplified example of the tree hash shape used in HalftimeHash.
-%%   At the leaves are the input blocks to be hashed.
-%%   Each instance of seven words is initially encoded and then hashed down to three blocks in a process called ``EHC''. \cite{ehc-nandi}
-%%   Following that, three copies of Carter-Wegman-style tree hash run on each of the components produced during the EHC step.
-%%   Note that the right-most blocks bypass one round of hashing.
-%%   This is equivalent to hashing with the identity function, which has $\varepsilon = 0$, and so allows the values to pass-through without adding any extra collision probability. \cite{badger}
-%% }
-%% \end{figure}
+\begin{figure}
+\includegraphics[width=\textwidth]{Diagram2.eps}
+\caption{
+  \label{tree}
+  A simplified example of the tree hash shape used in HalftimeHash.
+  At the leaves are the input blocks to be hashed.
+  Each instance of seven words is initially encoded and then hashed down to three blocks in a process called ``EHC''. \cite{ehc-nandi}
+  Following that, three copies of Carter-Wegman-style tree hash run on each of the components produced during the EHC step.
+  Note that the right-most blocks bypass one round of hashing.
+  This is equivalent to hashing with the identity function, which has $\varepsilon = 0$, and so allows the values to pass-through without adding any extra collision probability. \cite{badger}
+}
+\end{figure}
 
 Section \ref{algo} focuses on a particular instantiation of this formula with distance $3$, producing a hash value $24$ bytes in size.
 Adding variants with different distances is direct, and the benchmarking results below include variants with distance 2, 4, and 5.
@@ -408,7 +408,7 @@ Because the majority of the work of HalftimeHash is done in EHC, the higher leve
 %% The input blocks are the leaves, and the final output is at the root.
 %% As described above, this is an itererative process, starting from $G_1$ being applied to the entire input, then $G_2$ applied to the entire output of $G_1$, and so on.
 
-Rahter than Carter and Wegman's breath-first approach to tree hash, which allocates linear space in the size of the input on each execution, or a recursive approach that prooved to be prohibitively slow, HalftimeHash uses an iterative depth-first post-order approach.
+Rather than Carter and Wegman's breath-first approach to tree hash, which allocates linear space in the size of the input on each execution, or a recursive approach that proved to be prohibitively slow, HalftimeHash uses an iterative depth-first post-order approach.
 In this approach, a stack with height logarithmic in the size of the input is explicitly created to hold intermediate results; each level is large enough to store some user-tunable number of Blocks, $f$.
 To hash a string while traversing it, an input block is first hashed with EHC, with the output stored in the lowest level of the stack.
 This continues until the lowest level of the stack is full (contains $f$ Blocks).
@@ -1087,5 +1087,5 @@ Thanks to Daniel Lemire, Paul Khuong, and Guy Even for helpful discussions and f
 %%  LocalWords:  VHASH Nandi's ISA strided Wegman TODO VTune NH's XXH
 %%  LocalWords:  UMAC VMAC carryless fanout Nandi Gabrielyan Toeplitz
 %%  LocalWords:  Gabrielyan's HalftimeHash's Woelfel SMHasher PVLDB
-%%  LocalWords:  VLDB zeroless Skylake uint clmul pclmul Lemire
-%%  LocalWords:  Khuong
+%%  LocalWords:  VLDB zeroless Skylake uint clmul pclmul Lemire xxh
+%%  LocalWords:  Khuong Wegman's tunable
