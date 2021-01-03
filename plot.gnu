@@ -19,7 +19,6 @@ plot 'smhasher-speed.txt' using 2:xtic(1), '' using 3
 unset style
 
 set terminal postscript eps enhanced color size 12cm,6.4cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr17.pfb" "LMRoman17,17"
-#set terminal postscript eps enhanced color size 5,6 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
 set output 'speed-v-epsilon.eps'
 set ylabel 'bytes per nanosecond'
 set xlabel 'output entropy'
@@ -33,6 +32,21 @@ set yrange[10:70]
 unset offsets
 set format x '%L'
 plot 'points-example.txt' using (1/column(2)):1:3 with labels point pt 7 offset char -1,1, '' using (1/column(5)):4:6 with labels point pt 7 offset char 2,-1
+
+set terminal postscript eps enhanced color size 12cm,6.4cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr17.pfb" "LMRoman17,17"
+set output 'speed-v-epsilon-amd.eps'
+set ylabel 'bytes per nanosecond'
+set xlabel 'output entropy'
+set title "Output entropy vs. B/ns (upper right is better)"
+unset key
+set logscale x 2
+unset logscale y
+set grid
+set xrange[2**20:2**160]
+set yrange[5:50]
+unset offsets
+set format x '%L'
+plot 'c5a.large-clang-11-925ea6f.txt'  using (1/column(2)):1:3 with labels point pt 7 offset char -1,1, '' using (1/column(5)):4:6 with labels point pt 7 offset char 2,-1
 
 set terminal postscript eps enhanced color size 6.4cm,6.4cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr17.pfb" "LMRoman17,17"
 #set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"

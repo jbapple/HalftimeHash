@@ -4,7 +4,7 @@ all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe \
 	line-cl-hh24.eps amd-16.eps clang-local-hh4.eps test-read-each-byte.exe \
 	test-read-each-byte.debug-exe no-collisions.exe no-collisions.debug-exe \
 	smhasher-speed.eps test-bytes-needed.exe example.exe yes-badger.eps \
-	no-badger.eps
+	no-badger.eps speed-v-epsilon-amd.eps
 
 RELEASE_FLAGS = -ggdb3 -O3 -march=native -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -DNDEBUG \
@@ -41,10 +41,10 @@ umash/umash.o: umash/umash.c Makefile
 %.debug-exe: %.cpp $(shell find -name '*.hpp' ) umash/umash.o Makefile
 	$(CXX) $(CXX_DEBUG_FLAGS) -o $@ $< umash/umash.o
 
-amd-16.eps: plateau-008.txt points-example.txt smhasher-speed.txt plot.gnu Makefile
+amd-16.eps: plateau-008.txt points-example.txt smhasher-speed.txt c5a.large-clang-11-925ea6f.txt plot.gnu Makefile
 	gnuplot plot.gnu
 
-smhasher-speed.eps line-cl-hh24.eps speed-v-epsilon.eps amd-cl-hh24.eps clang-local-hh4.eps: plateau-008.txt points-example.txt plot.gnu amd-16.eps Makefile
+smhasher-speed.eps line-cl-hh24.eps speed-v-epsilon.eps amd-cl-hh24.eps clang-local-hh4.eps speed-v-epsilon-amd.eps: plateau-008.txt points-example.txt plot.gnu amd-16.eps Makefile
 
 clean: Makefile
 	rm -f Diagram2.eps
