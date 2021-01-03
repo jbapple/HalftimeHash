@@ -139,16 +139,12 @@ VHASH similarly came about before EHC and is an update to UHASH designed to take
 
 \section{Notations and Conventions}
 
-$H$ and $G$ will denote hash families.
-Other capital letters will denote sets, functions, or matrices.
-Lowercase letters represent strings or non-negative integers; $n$ generally denotes the size of the input string in 64-bit words.
-Arithmetic operations are over elements of $\ints_m$ or $\ints$.
-
+Input string length $n$ is measured in 64-bit words.
 ``32-bit multiplication'' means multiplying two unsigned 32-bit words and producing a single 64-bit word.
 ``64-bit multiplication'' similarly refers to the operation producing a 128-bit product.
 All machine integers are unsigned.
 
-Subscripts are used to indicate a numbered component of a sequence, starting at 0.
+Subscripts indicate a numbered component of a sequence, starting at 0.
 
 $\varepsilon$ is called the {\em collision probability} of $H$; it is inversely related to $H$'s {\em output entropy}, $-\lg \varepsilon$.
 
@@ -158,11 +154,9 @@ The seed is sometimes referred as {\em input entropy}, which is distinguished fr
 Each step of HalftimeHash applies various transforms to groups of input values.
 These groups are called {\em instances}.
 Instances are logically contiguous but physically strided, for the purpose of making SIMD vector processing faster and simpler.
-The number of 64-bit words between two 64-bit words in the same instance, plus one (for a fencepost), is the expected SIMD parallelism.
 This physically contiguous set is called a {\em block}; the number of 64-bit words in a block is called the {\em block size}.
 The processing of a transform on a single instance is called an {\em execution}.
-Because instances are logically contiguous, when possible, the text will elide references to the block size.
-
+Because instances are logically contiguous, when possible, the analysis will elide references to the block size.
 
 HalftimeHash produces output that is collision resistant among strings of the same length.
 Adding collision resistance between strings of {\em different} lengths to such a hash family requires only appending the length at the end of the output.
@@ -187,8 +181,8 @@ HalftimeHash is similar to tree hash as described by Carter and Wegman. \cite{ca
 The leaves of a tree are the words of the input string, while the root is the output hash value.
 Each level of edges is represented by a single hash function chosen at random from an AU family, so a total of $\Theta(\lg n)$ functions are chosen.
 
-More concretely, $H(s_1,\langle{}a,b\rangle) = x$ is a tree hash execution of height 1, $H(s_1, \langle H(s_0, \langle a,b\rangle), H(s_0, \langle c,d\rangle)\rangle) = y$ is a tree hash execution of height 2, and so on.
-Note that the seed $s_0$ is used for both executions of height 1.
+More concretely, $H(s_0,\langle{}a,b\rangle) = x$ is a tree hash execution of height 1, hashing the string $ab$, $H(s_1, \langle H(s_0, \langle a,b\rangle), H(s_0, \langle c,d\rangle)\rangle) = y$ is a tree hash execution of height 2, hashing the string $abcd$, and so on.
+Note that the seed $s_0$ is used for all executions of height 1.
 
 Carter and Wegman show that if $H$ is $\varepsilon$-AU, then a tree of height $m$ is $m\varepsilon$-AU.
 %The Badger construction (\cite{badger}) shows how to manage strings where there is a mismatch in the input and output arity at some levels without negatively impacting the universality.
@@ -198,18 +192,18 @@ The central idea is called ``EHC'', for {\em Encode, Hash, Combine}. \cite{ehc-n
 The application of the erasure code adds ``minimum distance'' $d$, so that any two input values that differ in any location produce encoded outputs that differ in at least $d > 1$ locations.
 This decreases the probability of collisions by a factor of $\varepsilon^{d-1}$.
 
-\begin{figure}
-\includegraphics[width=\textwidth]{Diagram2.eps}
-\caption{
-  \label{tree}
-  A simplified example of the tree hash shape used in HalftimeHash.
-  At the leaves are the input blocks to be hashed.
-  Each instance of seven words is initially encoded and then hashed down to three blocks in a process called ``EHC''. \cite{ehc-nandi}
-  Following that, three copies of Carter-Wegman-style tree hash run on each of the components produced during the EHC step.
-  Note that the right-most blocks bypass one round of hashing.
-  This is equivalent to hashing with the identity function, which has $\varepsilon = 0$, and so allows the values to pass-through without adding any extra collision probability. \cite{badger}
-}
-\end{figure}
+%% \begin{figure}
+%% \includegraphics[width=\textwidth]{Diagram2.eps}
+%% \caption{
+%%   \label{tree}
+%%   A simplified example of the tree hash shape used in HalftimeHash.
+%%   At the leaves are the input blocks to be hashed.
+%%   Each instance of seven words is initially encoded and then hashed down to three blocks in a process called ``EHC''. \cite{ehc-nandi}
+%%   Following that, three copies of Carter-Wegman-style tree hash run on each of the components produced during the EHC step.
+%%   Note that the right-most blocks bypass one round of hashing.
+%%   This is equivalent to hashing with the identity function, which has $\varepsilon = 0$, and so allows the values to pass-through without adding any extra collision probability. \cite{badger}
+%% }
+%% \end{figure}
 
 Section \ref{algo} focuses on a particular instantiation of this formula with distance $3$, producing a hash value $24$ bytes in size.
 Adding variants with different distances is direct, and the benchmarking results below include variants with distance 2, 4, and 5.
@@ -223,7 +217,7 @@ The hashing primitive used in HalftimeHash to hash small, fixed-length sequences
 \]
 where $d, s \in \ints_{2^32}^{2m+2}$ are the input string and the seed, respectively.
 The $d + s$ additions are in the ring $\ints_{2^{32}}$, while all other operations are in the ring $\ints_{2^{64}}$.
-NH is $2^{-32}$-AU, and is widely used in hash families such as UMAC \cite{umac}, VMAC \cite{vmac}, clhash \cite{clhash}, UMASH \cite{umash}, XXH3 \cite{xxh3}, and more, usually with $k = 64$.
+NH is $2^{-32}$-AU.
 
 In HalftimeHash, no 64-bit-mul\-ti\-pli\-ca\-tions are needed.
 This is in support of two goals --
@@ -253,14 +247,13 @@ Aarch64 has similar instructions in the NEON set.
 
 \subsection{Encode-Hash-Combine}
 
-At the leaves of the tree, HalftimeHash uses an algorithm called ``EHC'' for {\em encode-hash-combine}: \cite{ehc-nandi}
+At the leaves of the tree, HalftimeHash uses the EHC algorithm: \cite{ehc-nandi}
 
 \begin{enumerate}
 \item A sequence of items is encoded with an erasure code with minimum distance $d$.
-\item Each item in the encoded sequence is hashed, with an independently chosen seed, to a field $F$.
-  HalftimeHash uses NH for the encoding. % (the AU variant, not the A$\Delta$U one)
-\item The resulting sequence of hash values is put through a linear transformation $T$ on $F^m$.
-  $T$ must have the property that any $d$ columns of it are independent, and so a square matrix made up of any $d$ columns is injective.
+\item Each item in the encoded sequence is hashed, with an independently chosen seed.
+\item A linear transformation $T$ is applied to the resulting sequence of hash values.
+  $T$ must have the property that any $d$ columns of it are independent.
 %  A linear transformation with this property is said to be {\em d-MDS}.
 \end{enumerate}
 
@@ -279,7 +272,7 @@ The lower that ratio ($9/7$) is, the fewer multiplications that HalftimeHash doe
 For example, if HalftimeHash used a different erasure code that had minimum distance 2 over 14 words, and the output of step 2 were 17 words, then the additional multiplications induced by encoding the data would be lower.
 %By the Singleton bound, A code with minimum distance $d$ must be at least $d-1$ characters longer than the pre-encoded data.
 However, in order to use large blocks, the matrix $T$ must grow as well.
-For finite fields, this is not an issue, but in $\ints_{2^{64}}$, as discussed below, it becomes a constraint satisfaction problem to find matrices that preserve entropy.
+For finite fields, this is not an issue, but in $\ints_{2^{64}}$, as discussed in Section \ref{analysis}, it becomes a constraint satisfaction problem to find matrices that preserve entropy.
 %While this work can be done offline, it's not obvious the effort will yield good results.
 
 %% Instead of using large blocks, HalftimeHash uses a short erasure code but uses SIMD to maintain high throughput.
@@ -304,7 +297,7 @@ The second tuple is the following sum, numbering the input words as $(x_0, y_0, 
   \end{array}
 \end{displaymath}
 
-While {\em linear} erasure codes on $\ints_2$ exist, they do not achieve as ratio as low as $9/7$ for code with minimum distance 3. \cite{codetables.de}
+While {\em linear} erasure codes on $\ints_2$ exist, they do not achieve as ratio as low as $9/7$ for codes with minimum distance 3. \cite{codetables.de}
 
 \subsubsection{Transform cost}
 
@@ -339,6 +332,7 @@ For other output widths, HalftimeHash uses
   0 & 1 & 1 & 2 & 1 & 4 & 1
 \end{array}
 \right)
+\textrm{(with $p = 2^2$)}
 \]
 
 \[
@@ -350,6 +344,7 @@ For other output widths, HalftimeHash uses
  1 & 1 & 0 & 1 & 0 & 0 & 4 & 1 & 2 & 8
 \end{array}
 \right)
+\textrm{(with $p = 2^3$)}
 \]
 
 \[
@@ -362,6 +357,7 @@ For other output widths, HalftimeHash uses
  0 & 0 & 0 & 0 & 1 & 1 & 5 & 3 & 9
 \end{array}
 \right)
+\textrm{(with $p = 2^3$)}
 \]
 
 %Furthermore, the input to each section is independent? Partially independent, based on the loss at the matrix multiplication step? Since each partition
@@ -369,9 +365,9 @@ For other output widths, HalftimeHash uses
 \subsection{Tree hashing}
 
 As presented, NH and EHC only hash fixed-size blocks.
-Carter and Wegman outline a simple tree-like construction of hashing to handle strings of different and arbitrary lengths. \cite{badger,carter-wegman-79}
+Carter and Wegman outline a simple tree-like construction of hashing to handle strings of arbitrary length. \cite{badger,carter-wegman-79}
 The idea is direct composition of hash functions that take more bytes as input (excluding seeds) than they produce as output.
-A more detailed description is in the overview of Section \ref{algo} and in Figure \ref{tree}.
+A more detailed description is in the overview of Section \ref{algo}.
 
 For the tree hashing stage after EHC, three tree hashes are executed with independently-chosen seeds.
 Because the majority of the work of HalftimeHash is done in EHC, the higher levels of the tree are less consequential to the end-to-end time.
@@ -409,14 +405,9 @@ Because the majority of the work of HalftimeHash is done in EHC, the higher leve
 %% As described above, this is an itererative process, starting from $G_1$ being applied to the entire input, then $G_2$ applied to the entire output of $G_1$, and so on.
 
 Rather than Carter and Wegman's breath-first approach to tree hash, which allocates linear space in the size of the input on each execution, or a recursive approach that proved to be prohibitively slow, HalftimeHash uses an iterative depth-first post-order approach.
-In this approach, a stack with height logarithmic in the size of the input is explicitly created to hold intermediate results; each level is large enough to store some user-tunable number of Blocks, $f$.
-To hash a string while traversing it, an input block is first hashed with EHC, with the output stored in the lowest level of the stack.
-This continues until the lowest level of the stack is full (contains $f$ Blocks).
-When the next call of EHC is about to be made, HalftimeHash hashes the lowest level in the stack with NH and puts it output in the next level of the stack.
-This compaction process leaves room for the output of EHC in the lowest level.
-A similar process happens further up the stack when higher levels are full.\footnote{This is nearly identical to the way log-structured merge-trees work. \cite{lsm-survey}}.
-
-The stack evolution is equivalent to iteration in a redundant zeroless number system in base $f$. \cite{redundant-zeroless}
+This creates a stack with a set of levels for each of the 3 instances.
+Partial results are collected in these stack levels until there are $f$ items, which are then hashed and the result deposited in the next level.
+This $f$ is a user-tunable quantity which trades off input entropy for instruction-level parallelism speed.
 
 %% \begin{itemize}
 %% \item The empty sequence is a number; it represents the value $0$.
@@ -441,13 +432,36 @@ The stack evolution is equivalent to iteration in a redundant zeroless number sy
 
 Once the tree hash portion of HalftimeHash is complete, there still remains data to hash.
 
-First, the tree hash leaves data in its stack - as many as $bf$ words of data per level per tree, where $b$ is the size of a block and $f$ is \texttt{fanout}, a user-tunable parameter discussed in Section \ref{analysis}.
+First, the tree hash leaves data in its stack - as many as $bf$ words of data per level per tree, where $b$ is the size of a block and $f$ is \texttt{fanout}, a user-tunable parameter discussed in Section \ref{analysis}. The Badger hash family addresses this by promoting items from lower levels to upper levels.
+This does not negatively affect the collision probability, as promotion is equivalent to hashing with the identity function, which has colision probability $\varepsilon = 0$.
+See Figure \ref{yes-badger} for a graphical representation for how this would work in HalftimeHash.
 
+\begin{figure}
+\includegraphics[width=\textwidth]{yes-badger.eps}
+\caption{\label{yes-badger}
+  A Badger-style stack sweep is shown here.
+  This instance contains $7 \cdot 3 \cdot 5 = 105$ words; each leaf box represents three words.
+  The first 84 words and the last 21 words form perfect treesleaving level 0 and level 2 occupied at the end of the tree hash.
+  Badger handles this with promotion and then continues tree hashing. \cite{badger}
+}
+\end{figure}
+
+This approach uses no additional entropy, but it does create dependencies between hashing done closer to the leaves of the stack and hashing closer to the root, and testing revealed it to be slower in some cases.
+Instead, HalftimeHash uses NH to hash all of the data in the stack; see Figure \ref{no-badger}.
+
+\begin{figure}
+\includegraphics[width=\textwidth]{no-badger.eps}
+\caption{\label{no-badger}
+  This instance is similar to Figure \ref{yes-badger}, but shows how the sweep of the stack is done in HalftimeHash.
+  Here, the curved lines represent shared NH instances that are used to hash each pair.
+  This method hashes the stack directly, while Badger's sweep is a variant of tree hashing.
+}
+\end{figure}
+
+In either case, the stack is hashed down to three words.
+HalftimeHash uses these as the bases for three NH instances.
 In addition to the data on the stack, there are some characters that have yet to be hashed at all since HalftimeHash's EHC design expects to be fed $7 \cdot 3 = 21$ words at each invocation, and no fewer, so there may be up to 20 words remaining at the end of the input string.
-
-HalftimeHash uses three NH hash applications to complete the operation.
-First, it feeds every hash value in the three stacks to the corresponding NH execution.
-Second, it feeds every word in the remainder of the input string into {\em all three} NH executions.
+Every word in this remainder is fed into into all three NH executions.
 %% For both, HalftimeHash uses the A$\Delta$U version of NH.
 
 HalftimeHash then returns the three NH sums, for a total of 24 bytes of output.
@@ -480,66 +494,24 @@ Post-sweep tabulation hashing is available as an option in HalftimeHash's code; 
 
 This section presents metrics of an execution of HalftimeHash, including the collision probability, number of multiplications performed, and the amount of input entropy used.
 This section will treat HalftimeHash as abstract, rather than focusing on a single version as Section \ref{algo} did.
-For this we will use the following variables:
+The parameters are:
 
 \begin {description}
 \item[$w$] is the number of blocks used in Encode step.
-\item[$d$] is the {\em dimension} of the erasure code - the number of elements before applying the encoding, and $d w$ is the total number of blocks fed into each EHC execution.
+\item[$d$] is the number of elements before applying the encoding.
 \item[$e$] is the {\em encoded size} - the number of blocks in EHC after applying the encoding.
 \item[$k$] is the number of blocks produced by the Combine step of EHC.
-  This is also the number of 64-bit words produced at the end of the Sweep step of HalftimeHash.
 \item[$b$] the number of 64-bit words in a block.
-\item[$f$] is fanout, a user-adjustable integer parameter of at least 2 that can decrease the collision probability at the cost of increasing the amount of input entropy used.
-  Fanout corresponds to the size of an instance fed to NH in the tree hash portion of HalftimeHash.
-\item[$p$] is the maximum power of 2 that divides a determinant of any $k \times k$ matrix made from columns of the combining matrix $T$ in step three of EHC.
-  Larger $p$ implies larger collision probability; doubling $p$ increases $\varepsilon$ by a factor of $2^k$.
+\item[$f$] is fanout, the width of the NH instance at tree hash nodes.
+\item[$p$] is the maximum power of 2 that divides a determinant of any $k \times k$ matrix made from columns of the matrix $T$; doubling $p$ increases $\varepsilon$ by a factor of $2^k$.
 \end{description}
 
 In the example from Section ~\ref{algo} and the code corresponding to it, $(w,d,e,k,b,f,p) = (3,7,9,3,8,8,2)$.
-HalftimeHash has the following steps that will be analyzed in order:
-
-\begin{enumerate}
-\item The parts of EHC:
-  \begin {enumerate}
-  \item Encode
-  \item Hash
-  \item Combine
-  \end{enumerate}
-\item Tree hash
-\item Sweep
-  \begin{enumerate}
-  \item Sweep the $k$ stacks
-  \item Sweep the untouched tail of the original input string
-  \end{enumerate}
-\end{enumerate}
-
-%%A summary of the conclusions is in Table \ref{analysis-table}.
-
-%% \begin{table*}
-%% \begin{tabular}{|l|c|c|c|c|c|c|c|}
-%%   \hline {\bf Step} & {\bf Mults (each)} & {\bf In Entropy (each)} & {\bf Out Entropy (each)} & {\bf Height} & {\bf Number} & {\bf Out words total}\\
-%%   \hline (1) & $b e(w-1)$ & $e(w-1)$ & $k(32-p)$ & 1 & $\lfloor n/b d w \rfloor$ & $b k \lfloor n/b d w \rfloor$ \\
-%%   \hline (2) & $b (f-1)$ & $f-1$ & $32$ & $\left\lfloor\log_f\lfloor n/b d w \rfloor \right\rfloor$ & $k \lfloor n / b d w \rfloor / f$ & $b f k \left\lfloor\log_f\lfloor n/d w b \rfloor\right\rfloor$ \\
-%%   \hline (3)(a) & $b f \left\lfloor\log_f\lfloor n/b d w \rfloor\right\rfloor$ & $b f \left\lfloor\log_f\lfloor n/b d w \rfloor\right\rfloor$ & $32$ & 1 & $k$ & $k$ \\
-%%   \hline (3)(b) & $b d k w$ &  $b d w + k - 1$ & $32$ & 1 & 1 & $k$ \\
-%%   \hline (4) & 0 &  $2^{11}k$ & $64$ & 1 & 1 & 1 \\
-%%   \hline
-%% \end{tabular}
-%% \caption{\label{analysis-table}
-%%   Statistics for number of multiplications, amount of input entropy (in 64-bit words), and output entropy (counted in bits) of each step in HalftimeHash.
-%%   Additionally, each step has a height and width listed.
-%%   Height is the longest dependency chain between executions of the primitive in the listed step.
-%%   Number is the total number of executions of that primitive in an execution of HalftimeHash.
-%%   The multiplications in total for a step is the product of the multiplications in each times the number of executions of that primitive.
-%%   The collision probability is the product of the height and the collision probability of each execution of the primitive.
-%% }
-%% \end{table*}
 
 \subsection{EHC}
 
 In each EHC execution, $d w$ blocks are read in.
-They are converted to $e w$ blocks deterministically, without using any input entropy.
-Those $e w$ blocks are then hashed with NH (the AU version) to $e$ blocks.
+They are converted to $e w$ blocks deterministically, and those $e w$ blocks are then hashed with NH to $e$ blocks.
 This uses $e w$ words of input entropy and performs $e w$ multiplications.
 
 %% -------------------------
@@ -566,6 +538,13 @@ $\ints_{2^{64}}$ is not a finite field, but the structure of this proof that EHC
   \forall x,y,\delta, \Pr_s[H(s,x) - H(s,y) = \delta] \leq \varepsilon \in o(1)
   \]
 \end{definition}
+
+NH is $2^{-32}$-A$\Delta$U, and the NH variant that does not hash the last pair is $2^{-32}$-AU:
+
+\[
+\left(\sum_{i=0}^{m-2} (d_{2i} + s_{2i})(d_{2i+1} + s_{2i+1})\right) + d_{2m} + 2^{32} d_{2m+1}
+\]
+
 
 \begin{lemma}
   When the matrix product is taken over a field, if the hash function used in step 2 is $\varepsilon$-A$\Delta$U, EHC is $\varepsilon^k$-A$\Delta$U.
@@ -607,14 +586,14 @@ $\ints_{2^{64}}$ is not a finite field, but the structure of this proof that EHC
 
   The columns of $T$ in HalftimeHash are linearly independent in $\ints$, so the matrix $T|_F$ is injective in $\ints^{k\times{}k}$, but not necessarily injective in $\ints_{2^{64}}^{k\times{}k}$ because every even number in $\ints_{2^{64}}$ is a zero divisor.
 
-  However, even in non-field rings like $\ints_{2^{64}}$, the adjugate matrix $\adj(A)$ has the property that $A \cdot \adj(A) = adj(A) \cdot A = \det(A) I$.
+  However, even in non-field rings like $\ints_{2^{64}}$, the adjugate matrix $\adj(A)$ has the property that $A \cdot \adj(A) = \adj(A) \cdot A = \det(A) I$.
   Let $\det(T|_F) = q2^p$, where $q$ is odd.
   Now (\ref{ehc-delta}) reduces to
   \[
   \begin{array}{rl}
     &  \max_\delta \Pr_s[T|_F \bar{H}|_F(s,x) - T|_F \bar{H}|_F(s,y) = \delta]\\
     \leq & \max_\delta \Pr_s[\adj(T|_F) T|_F \bar{H}|_F(s,x) - \adj(T|_F) T|_F \bar{H}|_F(s,y) = \adj(T|_F) \delta] \\
-    = & \max_\delta \Pr_s[q2^p\bar{H}|_F(s,x) - q2^p\bar{H}|_F(s,y) = adj(T|_F) \delta] \\
+    = & \max_\delta \Pr_s[q2^p\bar{H}|_F(s,x) - q2^p\bar{H}|_F(s,y) = \adj(T|_F) \delta] \\
     = & \max_\delta \Pr_s[2^p\bar{H}|_F(s,x) - 2^p\bar{H}|_F(s,y) = q^{-1} \adj(T|_F) \delta]
   \end{array}
   \]
@@ -624,8 +603,8 @@ $\ints_{2^{64}}$ is not a finite field, but the structure of this proof that EHC
   \[
   \begin{array}{rl}
     = & \max_\beta \Pr_s[\bar{H}|_F(s,x) - \bar{H}|_F(s,y) \equiv \beta \bmod 2^{64-p}] \\
-    = & \max_\beta \Pr_s\left[\bigwedge_{i \in F} H(s_i,x_i) - H(s_i,y_i) \equiv \beta \bmod 2^{64-p}\right] \\
-    = & \max_\beta \prod_{i \in F} \Pr_s\left[ H(s_i,x_i) - H(s_i,y_i) \equiv \beta \bmod 2^{64-p}\right] \\
+    = & \max_\beta \Pr_s\left[\bigwedge_{i \in F} H(s_i,x_i) - H(s_i,y_i) \equiv \beta_i \bmod 2^{64-p}\right] \\
+    = & \max_\beta \prod_{i \in F} \Pr_s\left[ H(s_i,x_i) - H(s_i,y_i) \equiv \beta_i \bmod 2^{64-p}\right] \\
     = & \left(2^p 2^{-32}\right)^{|F|} = 2^{k(p-32)}
   \end{array}
   \]
@@ -663,7 +642,7 @@ Each tree has $\lfloor n / b d w \rfloor$ blocks as input and, when a block is w
 The height of the tree is thus $\left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor$.
 
 \begin{lemma}
-The tree hash portion of EHC produce is $2^{ k\lg\left\lfloor\log_f \lfloor n/b d w\rfloor\right\rfloor - 32k}$-AU.
+The tree hash portion of EHC is $2^{ k\lg\left\lfloor\log_f \lfloor n/b d w\rfloor\right\rfloor - 32k}$-AU.
 \end{lemma}
 \begin{proof}
   Carter and Wegman showed that tree hash has collision probability of $m \varepsilon$, where $\varepsilon$ is the collision probability of a single node in the tree and $m$ is the height of the tree.
@@ -675,10 +654,7 @@ The tree hash portion of EHC produce is $2^{ k\lg\left\lfloor\log_f \lfloor n/b 
 %% As a result, EHC doesn't need to be A$\Delta$U, which means that the NH variant used in it does not need to be A$\Delta$U.
 
 The amount of entropy needed is proportional to the height of the tree, with $f$ words needed for every level.
-Here, HalftimeHash uses different seeds for the $k$ different trees to maintain independence of the entropy in the words of the output values, so the total number of 64-bit words of entropy used in the tree hash step is $f k\left\lfloor\log_f \lfloor n/b d w\rfloor\right\rfloor$.
-
-Finally, the data in the stack is also proportional to the height and the number of trees.
-Specifically, there are up to $b f$ words in each stack level, and there are $k \left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor$ stack levels, counting each $k$ times for the $k$ different stacks.
+HalftimeHash uses different seeds for the $k$ different trees, so the total number of 64-bit words of entropy used in the tree hash step is $f k\left\lfloor\log_f \lfloor n/b d w\rfloor\right\rfloor$.
 
 The number of multiplications performed is identical to the number of input words. $k b \lfloor n / b d w \rfloor$.
 
@@ -713,7 +689,7 @@ Both Nandi and Woelfel present short proofs that this construction for multi-par
 
 The combined collision probability is
 \[2^{k(p-32)} + \left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor^k 2^{-32k} + 2^{-32k}\]
-For the main example described above, with $k=3$, $p=2$, $f=8$, $d = 7$, and $w=3$, and for strings less than an exabyte in length, this is more than 83 bits of entropy.
+For the example described in Section \ref{algo}, and for strings less than an exabyte in length, this is more than 83 bits of entropy.
 
 The combined input entropy needed (in words) is
 
@@ -726,9 +702,9 @@ e w
 
 When $b$ is 8, as in the AVX-512 version of HalftimeHash, this is less than 34KB for strings of length up to one exabyte -- 8.4KB for strings of length up to one megabyte.
 6.1KB of this is for hashing the stack.
-This could be reduced by using the pass-through mechanism of Badger, rather than leaving data at multiple levels in the stack, as well as hashing the remaining untouched input string with another instantiation of HalftimeHash with smaller block size, but these adds complexity to the algorithm and empirically reduce performance.
+This could be reduced by using the pass-through mechanism of Badger, discussed above.
 
-The number of multiplications is asymptotically driven by the EHC step, since the total is $(e w + k) b \lfloor n / b d w \rfloor + O(\log n)$ and $e w$ is significantly larger than $k$.
+The number of multiplications is dominated by the EHC step, since the total is $(e w + k) b \lfloor n / b d w \rfloor + O(\log n)$ and $e w$ is significantly larger than $k$.
 
 For a string of length 1MB, 84\% of the multiplications happen in the EHC step. %, and the number of multiplications is about one per ten bytes of input.
 Intel's VTune tool show the same thing: 86\% of the clock cycles are spent in the EHC step.
@@ -807,7 +783,7 @@ Intel's VTune tool show the same thing: 86\% of the clock cycles are spent in th
 
 \section{Tests}
 
-This section covers performance testing for HalftimeHash compared to clhash and UMASH, two AU families that can hash long strings.
+This section covers performance testing for HalftimeHash, especially compared to clhash and UMASH, two AU families that can hash long strings.
 Each of those are based on carryless (or ``polynomial'') multiplication over $\ints_2$ and a version of NH.
 
 HalftimeHash can vary over three dimensions:
@@ -820,7 +796,7 @@ HalftimeHash can vary over three dimensions:
 
 A small sample of these are presented here, focused on large block sizes and ISA's with at least AVX2.
 
-In addition to the performance testing here, HalftimeHash passes all correctness tests in the SMHasher test suite.\cite{smhasher}
+In addition to the performance testing here, HalftimeHash passes all correctness tests in the SMHasher test suite and performs better as well; see Figure \ref{smhasher-speed}.\cite{smhasher}
 
 \begin{figure}
   \includegraphics[width=\textwidth]{smhasher-speed.eps}
@@ -832,8 +808,6 @@ In addition to the performance testing here, HalftimeHash passes all correctness
     Of the families here, only HalftimeHash and xxh128 pass all SMHasher tests.
 }
 \end{figure}
-
-\subsection{Throughput vs. output entropy}
 
 Figure \ref{frontier} displays the tension between higher output entropy and higher throughput for 250KB strings.
 Adding more output entropy increases the number of multiplications and additions that HalftimeHash (or clhash, or UMASH) has to perform.
@@ -849,18 +823,6 @@ Nandi showed that this is true in the general case, as there is a matching upper
 %% Each also passes the clhash tests.
 %% Additionally, the AVX-512 variants of HalftimeHash16 and HalftimeHash24 exceed all other hash functions in SMhasher in terms of speed.
 
-Figure \ref{output-variants} shows the variation of HalftimeHash throughput between output variants across input sizes.
-
-\begin{figure}
-\includegraphics[width=\textwidth]{clang-local-hh4.eps}
-\caption{
-  \label{output-variants}
-  Different output widths of HalftimeHash.
-  %Note that even the family with the longest output of 40 bytes is compet than clhash and UMASH; see Figure \protect\ref{frontier}.
-  The sharp drops in performance correspond to the L2 and L3 data cache sizes.
-}
-\end{figure}
-
 \begin{figure}
 \includegraphics[width=\textwidth]{speed-v-epsilon.eps}
 \caption{
@@ -875,7 +837,7 @@ Figure \ref{output-variants} shows the variation of HalftimeHash throughput betw
 Figure \ref{vs-cl} adds comparisons between clhash, UMASH, and HalftimeHash across input sizes and ISA's.
 Although these machines support different ISA vector extensions, the pattern is similar: at high enough volume, HalftimeHash's throughput exceeds that of the carryless-multiplication families.
 The ``v3'' after the name indicates block size: v3 means a 256-bit block size, while v4 (the default) means 512-bit block size.
-Figure \ref{block-size} shows how the smaller block size performs better on the AMD chip.
+
 %Cross-machine workloads or persistent hash values may require a consistent block size between machines with different maximum SIMD register sizes, but Figure \ref{block-size} shows the performance penalty is not unreasonable.
 
 \begin{figure*}
@@ -892,19 +854,6 @@ Figure \ref{block-size} shows how the smaller block size performs better on the 
   HalftimeHash24 also has lower collision probability.
   For long strings, the incremental cost of hashing the 24 bytes down to 8 with tabulation hashing is insignificant.
 }
-\end{figure*}
-
-\begin{figure*}
-\begin{tabular}{cccc}
-\includegraphics[width=6.0cm]{amd-16.eps}
-&
-\includegraphics[width=6.0cm]{amd-24.eps}
-\end{tabular}
-\caption{
-  \label{block-size}
-  AMD performance.
-  AMD chips do not have AVX-512 instructions, so blocks of that size are simulated with 2 AVX2 registers.
-  Using a block size of 256 bits performs better.}
 \end{figure*}
 
 %% TODO: compare to VHASH

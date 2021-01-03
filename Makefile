@@ -3,7 +3,8 @@
 all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe \
 	line-cl-hh24.eps amd-16.eps clang-local-hh4.eps test-read-each-byte.exe \
 	test-read-each-byte.debug-exe no-collisions.exe no-collisions.debug-exe \
-	smhasher-speed.eps test-bytes-needed.exe example.exe
+	smhasher-speed.eps test-bytes-needed.exe example.exe yes-badger.eps \
+	no-badger.eps
 
 RELEASE_FLAGS = -ggdb3 -O3 -march=native -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -DNDEBUG \
