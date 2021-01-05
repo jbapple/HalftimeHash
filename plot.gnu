@@ -1,5 +1,5 @@
 set terminal postscript eps enhanced color size 12cm,6.4cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr17.pfb" "LMRoman17,17"
-set title "SMhasher speed tests"
+set title "SMhasher speed tests (higher is better)"
 set ylabel "bytes per cycle"
 set key noautotitle
 set xtics rotate by -60
@@ -104,7 +104,7 @@ plot './c5a.large-clang-11-22bd15d.txt' using 1:4 with lines, './c5a.large-clang
 
 set terminal postscript eps enhanced color size 6.4cm,6.4cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr17.pfb" "LMRoman17,17"
 #set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
-set title 'i7-7800x'
+set title 'i7-7800x speed (higher is better)'
 unset offsets
 set xlabel 'input length in bytes'
 set ylabel 'bytes per nanosecond'
@@ -116,13 +116,13 @@ unset format y
 set format x '10^{%L}'
 set grid
 set output 'line-cl-hh24.eps'
-set yrange[*:80]
+set yrange[*:90]
 set xrange[*:*]
 plot './adu-full-001.txt' using 1:4 pt 6, '' using 1:11 with lines lw 10, '' using 1:13 with lines
 
 set terminal postscript eps enhanced color size 6.4cm,6.4cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr17.pfb" "LMRoman17,17"
 #set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
-set title '7R32'
+set title '7R32 speed (higher is better)'
 unset offsets
 set xlabel 'input length in bytes'
 unset ylabel
@@ -134,7 +134,7 @@ unset format y
 set format x '10^{%L}'
 set grid
 set output 'amd-cl-hh24.eps'
-set yrange[*:80]
+set yrange[*:90]
 set xrange[*:*]
 plot './c5a.large-clang-11-22bd15d.txt' using 1:8 pt 6, '' using 1:11 with lines lw 10, '' using 1:13 with lines
 #plot './c5a.large-clang-11-8c4af1f.txt' using 1:7 pt 6, './c5a.large-gcc-10-8c4af1f.txt' using 1:10 with lines lw 10, './c5a.large-clang-11-8c4af1f.txt' using 1:12 with lines
