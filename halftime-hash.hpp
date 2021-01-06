@@ -1,5 +1,37 @@
 #pragma once
 
+// This header defines HalftimeHash, a hash function designed for long strings (> 1KB).
+//
+// Here is an example of how to use it:
+//
+#if 0
+#include <algorithm>
+#include <array>
+#include <cstdint>
+#include <iostream>
+#include <random>
+#include <string>
+
+#include "halftime-hash.hpp"
+
+using namespace std;
+
+int main() {
+  array<uint64_t, halftime_hash::kEntropyBytesNeeded / sizeof(uint64_t)> entropy;
+  generate(entropy.begin(), entropy.end(), mt19937_64{});
+  string input;
+  while (cin >> input) {
+    cout << hex
+         << halftime_hash::HalftimeHashStyle512(entropy.data(), input.data(),
+                                                input.size())
+         << endl;
+  }
+}
+#endif
+//
+// HalftimeHash is a descendant of Badger and EHC. The article "HalftimeHash: modern
+// hashing without 64-bit multipliers or finite fields" describes it in more detail.
+
 #if defined (__x86_64)
 #include <immintrin.h>
 #endif
@@ -13,7 +45,7 @@
 #include <cstdint>
 #include <cstring>
 #include <initializer_list>
-#include <type_traits>
+#include <type_traits>  // for std::integral_constant
 
 namespace halftime_hash {
 
@@ -83,6 +115,10 @@ struct BlockWrapper256 {
 };
 
 #endif
+
+// NEON and SSE2 use the same type name. This is lazy, but it reduces code size and
+// shouldn't be a problem unless there is an arch that supports both (there isn't) or
+// until this code has dynamic CPU dispatch.
 
 #if defined(__ARM_NEON) || defined(__ARM_NEON__)
 
@@ -188,6 +224,9 @@ struct BlockWrapperScalar {
   static uint64_t LoadOne(uint64_t entropy) { return entropy; }
 };
 
+// NEON has a single intrinsic that does multiply-accumulate on integers. SSE/AVX doesn't
+// have this, so here is a default implementation that just does it the long way around,
+// with a specialization for NEON.
 template <typename T>
 T MultiplyAdd(T summand, T factor1, T factor2) {
   return Plus(summand, Times(factor1, factor2));
@@ -200,6 +239,16 @@ u128 MultiplyAdd(u128 summand, u128 factor1, u128 factor2) {
 }
 #endif
 
+// Here begin the encoding functions as part of EHC. Each takes an array of size
+// `encoded_dimension * in_width` as an argument. Only the first `dimension * in_width`
+// values are present.  The remaining ones are populated so as to make an erasure code
+// with minimum distance `encoded_dimension - dimension`.
+//
+// Each of these (except the trivial use case) uses an erasure code from Emin Gabrielyan.
+//
+// https://docs.switzernet.com/people/emin-gabrielyan/051101-erasure-9-7-resilient/
+// https://docs.switzernet.com/people/emin-gabrielyan/051102-erasure-10-7-resilient/
+// https://docs.switzernet.com/people/emin-gabrielyan/051103-erasure-9-5-resilient/
 template <typename Block>
 inline void Encode3(Block raw_io[9 * 3]) {
   auto io = reinterpret_cast<Block(*)[3]>(raw_io);
@@ -211,6 +260,8 @@ inline void Encode3(Block raw_io[9 * 3]) {
   io[7][z] = io[8][z] = iter[z];
   iter += 1;
 
+  // TODO: can't lift these to top-level functions, since that slows things down
+  // considerably. Think about making them macros so they don't need to be repeated?
   auto DistributeRaw = [io, iter](unsigned slot, unsigned label,
                                   std::initializer_list<unsigned> rest) {
     for (unsigned i : rest) {
@@ -252,7 +303,6 @@ inline void Encode2(Block raw_io[7 * 3]) {
   }
 }
 
-// https://docs.switzernet.com/people/emin-gabrielyan/051102-erasure-10-7-resilient/
 template <typename Block>
 inline void Encode4(Block raw_io[10 * 3]) {
   auto io = reinterpret_cast<Block(*)[3]>(raw_io);
@@ -360,6 +410,9 @@ inline void Encode5(Block raw_io[9 * 3]) {
   Distribute3(8, {x, z}, {x, y, z}, {y, z});  // 140
 }
 
+// Pre-declare combine steps, since these will be needed in the EHC step which is inside
+// the EhcBadger class template. These combine `encoded_dimension` values into `out_width`
+// values using a linear transformation.
 template <typename Badger, typename Block>
 inline void Combine2(const Block input[7], Block output[2]);
 
@@ -367,19 +420,35 @@ template <typename Badger, typename Block>
 inline void Combine3(const Block input[9], Block output[3]);
 
 template <typename Badger, typename Block>
-inline void Combine4(const Block input[10], Block output[3]);
+inline void Combine4(const Block input[10], Block output[4]);
 
 template <typename Badger, typename Block>
-inline void Combine5(const Block input[9], Block output[3]);
-
-constexpr inline int CeilingLog2(size_t n) {
-  return (n <= 1) ? 0 : 1 + CeilingLog2(n / 2 + n % 2);
-}
+inline void Combine5(const Block input[9], Block output[5]);
 
 constexpr inline uint64_t FloorLog(uint64_t a, uint64_t b) {
   return (0 == a) ? 0 : ((b < a) ? 0 : (1 + (FloorLog(a, b / a))));
 }
 
+// BlockWrapper: bundle of types and static `Load`ing functions. Could be replaced with a
+// wrapper type or a class template or functino template with specializations.
+//
+// dimension: the number of items that are fed into EHC
+//
+// in_width: the size of the items fed into NHC. So the distance-3 code has dimension 7
+// and in_width 3, meaning 21 `Block`s are fed in, but they are treated like 7 3-tuples.
+//
+// encoded_dimension: the size of the intermediate EHC results, in items. In `Block`s, the
+// size is `encoded_dimension * in_width`.
+//
+// out_width: the dimension of the codomain of the linear transformation in EHC. Also the
+// number of output words (64-bit words) of HalftimeHash.
+//
+// fanout: a user-tunable parameter that trades performance (via ILP) for seed size. Over
+// 8 didn't seem to make a difference for the author.
+//
+// `BlockWrapper` and `fanout` are the only parameters an end-user should think about
+// noodling with. The others are tied to each other in ways that prevent modiying only one
+// - or at least prevent it from making any sense to do so arbitrarily.
 template <typename BlockWrapper, unsigned dimension, unsigned in_width,
           unsigned encoded_dimension, unsigned out_width, unsigned fanout = 8>
 struct EhcBadger {
