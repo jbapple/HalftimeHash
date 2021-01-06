@@ -622,6 +622,19 @@ struct EhcBadger {
     }
   }
 
+  static void FlatHash(const char* data, size_t block_group_length,
+                       Block output[out_width], const uint64_t* entropy) {
+    auto entropy_matrix = reinterpret_cast<const uint64_t(*)[in_width]>(entropy);
+    Block tmp[out_width];
+    for (size_t k = 0; k < block_group_length; ++k) {
+      EhcBaseLayer(&data[k * dimension * in_width * sizeof(Block)], &entropy_matrix[dimension * k],
+                   tmp);
+      for (unsigned i = 0; i < out_width; ++i) {
+        output[i] = Plus(output[i], tmp[i]);
+      }
+    }
+  }
+
   static constexpr size_t GetEntropyBytesNeeded(size_t n) {
     auto b = sizeof(Block) / sizeof(uint64_t);
     auto h = FloorLog(fanout, n / (b * dimension * in_width));
@@ -836,16 +849,33 @@ void Hash(const uint64_t* entropy, const char* char_input, size_t length,
   int stack_lengths[kMaxStackSize] = {};
   size_t wide_length = length / sizeof(Block) / (dimension * in_width);
 
-  EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension, out_width,
-            kFanout>::DfsTreeHash(char_input, wide_length, stack, stack_lengths, entropy);
-  entropy += encoded_dimension * in_width + out_width * (kFanout - 1) * kMaxStackSize;
+  if (0 == wide_length && !std::is_same<BlockWrapper256, BlockWrapper>::value) {
+    BlockWrapper256::Block block_output[out_width];
+    wide_length = length / sizeof(BlockWrapper256::Block) / (dimension * in_width);
+    EhcBadger<BlockWrapper256, dimension, in_width, encoded_dimension, out_width,
+              kFanout>::FlatHash(char_input, wide_length, block_output, entropy);
+    auto used_chars =
+        wide_length * sizeof(BlockWrapper256::Block) * (dimension * in_width);
+    char_input += used_chars;
+    EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension, out_width,
+              kFanout>::DfsGreedyFinalizer(stack, stack_lengths, char_input,
+                                           length - used_chars, entropy, output);
+    for(unsigned i = 0; i < out_width; ++i) {
+      output[i] += Sum(block_output[i]);
+    }
+  } else {
+    EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension, out_width,
+              kFanout>::DfsTreeHash(char_input, wide_length, stack, stack_lengths,
+                                    entropy);
+    entropy += encoded_dimension * in_width + out_width * (kFanout - 1) * kMaxStackSize;
 
-  auto used_chars = wide_length * sizeof(Block) * (dimension * in_width);
-  char_input += used_chars;
+    auto used_chars = wide_length * sizeof(Block) * (dimension * in_width);
+    char_input += used_chars;
 
-  EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension, out_width,
-            kFanout>::DfsGreedyFinalizer(stack, stack_lengths, char_input,
-                                         length - used_chars, entropy, output);
+    EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension, out_width,
+              kFanout>::DfsGreedyFinalizer(stack, stack_lengths, char_input,
+                                           length - used_chars, entropy, output);
+  }
 }
 
 template <typename Block, unsigned count>
