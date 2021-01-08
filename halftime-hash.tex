@@ -320,29 +320,26 @@ Applying this matrix to a vector of hash values requires 6 shift operations and 
 For other output widths, HalftimeHash uses
 
 \[
-\left(
+\begin{tabular}{|r|c|c|c|}
+  \hline  & HalftimeHash16 & HalftimeHash32 & HalftimeHash40 \\
+  \hline $T$ & 
+$\left(
 \begin{array}{rrrrrrrrrrrr}
   1 & 0 & 1 & 1 & 2 & 1 & 4\\
   0 & 1 & 1 & 2 & 1 & 4 & 1
 \end{array}
-\right)
-\textrm{(with $p = 2^2$)}
-\]
-
-\[
-\left(
+\right)$
+&
+$\left(
 \begin{array}{rrrrrrrrrr}
  0 & 0 & 0 & 1 & 1 & 4 & 2 & 4 & 1 & 1 \\
  0 & 1 & 2 & 0 & 0 & 1 & 1 & 2 & 4 & 1 \\
  2 & 0 & 1 & 0 & 4 & 0 & 1 & 1 & 1 & 1 \\
  1 & 1 & 0 & 1 & 0 & 0 & 4 & 1 & 2 & 8
 \end{array}
-\right)
-\textrm{(with $p = 2^3$)}
-\]
-
-\[
-\left(
+\right)$
+&
+$\left(
 \begin{array}{rrrrrrrrr}
  1 & 0 & 0 & 0 & 0 & 1 & 1 & 2 & 4\\
  0 & 1 & 0 & 0 & 0 & 1 & 2 & 1 & 7\\
@@ -350,8 +347,10 @@ For other output widths, HalftimeHash uses
  0 & 0 & 0 & 1 & 0 & 1 & 4 & 9 & 8\\
  0 & 0 & 0 & 0 & 1 & 1 & 5 & 3 & 9
 \end{array}
-\right)
-\textrm{(with $p = 2^3$)}
+\right)$ \\
+\hline $p$ & $2^2$ & $2^3$ & $2^3$ \\
+\hline
+\end{tabular}
 \]
 
 %Furthermore, the input to each section is independent? Partially independent, based on the loss at the matrix multiplication step? Since each partition
