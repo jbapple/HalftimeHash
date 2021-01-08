@@ -87,7 +87,7 @@ inline Duration TimeMulti(unsigned count, U&&... args) {
          i *= 2;
          plateau = 0;
        }
-       if (plateau >= 16) break;
+       if (plateau >= 4) break;
      }
   } else {
     auto before = Now();
@@ -156,8 +156,8 @@ int main(int argc, char** argv) {
   vector<char> data(max_length, 0);
 
   cout << "0 \t best_hh";
-  for (int i : {4}) {
-    for (int j : {2,3,4,5}) {
+  for (int i : {4,3,2,1}) {
+    for (int j : {2}) {
       cout << "\t"
            << "Halftime" << (j * 8) << "v" << i;
     }
@@ -165,7 +165,7 @@ int main(int argc, char** argv) {
   // cout << "\t clhash \t clhash128 \t umash \t umash128";
   cout << endl;
 
-  uint64_t loop_count = 4;
+  uint64_t loop_count = 3;
 
   map<uint64_t, array<double, 20>> timings;
   for (uint64_t j = 0; j < loop_count; ++j) {
@@ -176,24 +176,24 @@ int main(int argc, char** argv) {
       reps = min(1000.0 * 1000, reps);
       Duration hh_time[8] = {
           TimeMulti<WrapHash<V4<2>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V4<3>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V4<4>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V4<5>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V4<3>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V4<4>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V4<5>>>(reps, entropy, data.data(), i),
 
           // TimeMulti<WrapHash< Hash<RepeatWrapper<BlockWrapper512, 2>, 6, 2, encoded_dimension,
           //     out_width>(entropy, char_input, length, output);V4<5>>>(reps, entropy, data.data(), i),
 
-          // TimeMulti<WrapHash<V3<2>>>(reps, entropy, data.data(), i),
+           TimeMulti<WrapHash<V3<2>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<V3<3>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<V3<4>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<V3<5>>>(reps, entropy, data.data(), i),
 
-          // TimeMulti<WrapHash<V2<2>>>(reps, entropy, data.data(), i),
+           TimeMulti<WrapHash<V2<2>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<V2<3>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<V2<4>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<V2<5>>>(reps, entropy, data.data(), i),
 
-          // TimeMulti<WrapHash<V1<2>>>(reps, entropy, data.data(), i),
+           TimeMulti<WrapHash<V1<2>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<V1<3>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<V1<4>>>(reps, entropy, data.data(), i),
           // TimeMulti<WrapHash<V1<5>>>(reps, entropy, data.data(), i),
