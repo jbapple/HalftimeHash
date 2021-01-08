@@ -103,7 +103,7 @@ A hash family $H$ is called is $\varepsilon$-almost universal (``$\varepsilon$-A
 The intuition behind this definition is that collisions can be made unlikely by picking randomly from a hash {\em family} independent of the input strings, rather than anchoring on a specific hash {\em function} that maps from $D$ to $C$ but does not take a seed as an input. AU hash families are useful in hash tables, where collisions slow down operations and, in extreme cases, can turn linear algorithms into quadratic ones. \cite{tabulation,rust-quadratic,impala-quadratic,algorithm-attack}
 
 HalftimeHash is new a ``universe collapsing'' hash family, designed to hash long strings into short ones. \cite{linear-hash-functions,hashing-without-primes-revisited,cuckoo-journal}
-This differs from short-input families like SipHash or tabulation hashing, which suitable for hashing short strings to a codomain of 64 bits. \cite{siphash,tabulation}
+This differs from short-input families like SipHash or tabulation hashing, which are suitable for hashing short strings to a codomain of 64 bits. \cite{siphash,tabulation}
 Universe collapsing families are especially suitable for composition with short-input families: when $n$ items are to be handled by a hash-based algorithm, even if they are very long, a universe-collapsing family that reduces them to hash values of length $c \lg n$ bits for some suitable $c \geq 3$ produces zero collisions with probability $1-O(n^{2-c})$.
 A short-input hash family can then treat the hashed values as if they were the original distinct input values. \cite{universe-collapse-linear-probing,siphash,tabulation,simple-hash-functions-work}
 This technique applies not only to hash tables, but also to message-authentication codes, load balancing in distributed systems, privacy amplification, randomized geometric algorithms, Bloom filters, and randomness extractors. \cite{poly1305,chord,privacy-amplification,random-closest-pair,simple-hash-functions-work,fuzzy-extractors}
@@ -320,29 +320,26 @@ Applying this matrix to a vector of hash values requires 6 shift operations and 
 For other output widths, HalftimeHash uses
 
 \[
-\left(
+\begin{tabular}{|r|c|c|c|}
+  \hline  & HalftimeHash16 & HalftimeHash32 & HalftimeHash40 \\
+  \hline $T$ & 
+$\left(
 \begin{array}{rrrrrrrrrrrr}
   1 & 0 & 1 & 1 & 2 & 1 & 4\\
   0 & 1 & 1 & 2 & 1 & 4 & 1
 \end{array}
-\right)
-\textrm{(with $p = 2^2$)}
-\]
-
-\[
-\left(
+\right)$
+&
+$\left(
 \begin{array}{rrrrrrrrrr}
  0 & 0 & 0 & 1 & 1 & 4 & 2 & 4 & 1 & 1 \\
  0 & 1 & 2 & 0 & 0 & 1 & 1 & 2 & 4 & 1 \\
  2 & 0 & 1 & 0 & 4 & 0 & 1 & 1 & 1 & 1 \\
  1 & 1 & 0 & 1 & 0 & 0 & 4 & 1 & 2 & 8
 \end{array}
-\right)
-\textrm{(with $p = 2^3$)}
-\]
-
-\[
-\left(
+\right)$
+&
+$\left(
 \begin{array}{rrrrrrrrr}
  1 & 0 & 0 & 0 & 0 & 1 & 1 & 2 & 4\\
  0 & 1 & 0 & 0 & 0 & 1 & 2 & 1 & 7\\
@@ -350,8 +347,10 @@ For other output widths, HalftimeHash uses
  0 & 0 & 0 & 1 & 0 & 1 & 4 & 9 & 8\\
  0 & 0 & 0 & 0 & 1 & 1 & 5 & 3 & 9
 \end{array}
-\right)
-\textrm{(with $p = 2^3$)}
+\right)$ \\
+\hline $p$ & $2^2$ & $2^3$ & $2^3$ \\
+\hline
+\end{tabular}
 \]
 
 %Furthermore, the input to each section is independent? Partially independent, based on the loss at the matrix multiplication step? Since each partition
