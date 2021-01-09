@@ -157,9 +157,11 @@ int main(int argc, char** argv) {
 
   cout << "0 \t best_hh";
   for (int i : {4}) {
-    for (int j : {2,3,4,5}) {
+    for (int j : {2,3}) {
       cout << "\t"
-           << "Halftime" << (j * 8) << "v" << i;
+           << "Halftime" << (j * 8) << "v" << i << "true";
+      cout << "\t"
+           << "Halftime" << (j * 8) << "v" << i << "false";
     }
   }
   // cout << "\t clhash \t clhash128 \t umash \t umash128";
@@ -175,10 +177,13 @@ int main(int argc, char** argv) {
       reps = max(reps, 8.0);
       reps = min(1000.0 * 1000, reps);
       Duration hh_time[8] = {
-          TimeMulti<WrapHash<V4<2>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V4<3>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V4<4>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V4<5>>>(reps, entropy, data.data(), i),
+        //TimeMulti<WrapHash<V4<2>>>(reps, entropy, data.data(), i),
+        TimeMulti<WrapHash<V4true<2>>>(reps, entropy, data.data(), i),
+        TimeMulti<WrapHash<V4false<2>>>(reps, entropy, data.data(), i),
+        TimeMulti<WrapHash<V4true<3>>>(reps, entropy, data.data(), i),
+        TimeMulti<WrapHash<V4false<3>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V4<4>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V4<5>>>(reps, entropy, data.data(), i),
 
           // TimeMulti<WrapHash< Hash<RepeatWrapper<BlockWrapper512, 2>, 6, 2, encoded_dimension,
           //     out_width>(entropy, char_input, length, output);V4<5>>>(reps, entropy, data.data(), i),
@@ -222,7 +227,7 @@ int main(int argc, char** argv) {
   for (auto& j : timings) {
     cout << setprecision(8) << j.first;
     auto best_hh = j.second[0];
-    for (int i = 1; i < 4; ++i) {
+    for (int i = 4; i < 1; ++i) {
       best_hh = max(best_hh, j.second[i]);
     }
     cout << "\t" << best_hh;

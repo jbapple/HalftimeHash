@@ -484,6 +484,18 @@ struct EhcBadger {
     }
   }
 
+  static void PartialUpperLayer(size_t length, const Block (&input)[fanout][out_width],
+                                const uint64_t entropy[out_width * (fanout - 1)],
+                                Block (&output)[out_width]) {
+    for (unsigned i = 0; i < out_width; ++i) {
+      output[i] = input[0][i];
+      for (unsigned j = 1; j < length; ++j) {
+        output[i] =
+            MixOne(output[i], input[j][i], entropy[(fanout - 1) * i + j - 1]);
+      }
+    }
+  }
+
   static void Encode(Block io[encoded_dimension][in_width]) {
     static_assert(2 <= out_width && out_width <= 5, "uhoh");
     if (out_width == 3) return Encode3<Block>(&io[0][0]);
@@ -622,6 +634,31 @@ struct EhcBadger {
     }
   }
 
+  static const Block * CompactDfsTree(Block stack[][fanout][out_width],
+                                      int stack_lengths[],
+                                      const uint64_t* entropy) {
+    unsigned stack_height = 0;
+    while (stack_lengths[stack_height++]);
+    int i = 0;
+    while (stack_lengths[i] == fanout) ++i;
+    for (int j = i - 1; j >= 0; --j) {
+      EhcUpperLayer(stack[j],
+                    &entropy[encoded_dimension * in_width + (fanout - 1) * out_width * j],
+                    stack[j + 1][stack_lengths[j + 1]]);
+      stack_lengths[j] = 0;
+      stack_lengths[j + 1] += 1;
+    }
+    for(unsigned j = 0; j < stack_height; ++j) {
+      PartialUpperLayer(
+          stack_lengths[j], stack[j],
+          &entropy[encoded_dimension * in_width + (fanout - 1) * out_width * j],
+          stack[j + 1][stack_lengths[j + 1]]);
+      stack_lengths[j] = 0;
+      stack_lengths[j + 1] += 1;
+    }
+    return stack[stack_height][0];
+  }
+
   static constexpr size_t GetEntropyBytesNeeded(size_t n) {
     auto b = sizeof(Block) / sizeof(uint64_t);
     auto h = FloorLog(fanout, n / (b * dimension * in_width));
@@ -638,7 +675,7 @@ struct EhcBadger {
    public:
     BlockGreedy(const uint64_t seeds[]) : seeds(seeds) {}
 
-    void Insert(const Block (&x)[out_width]) {
+    void Insert(const Block x[out_width]) {
       for (unsigned i = 0; i < out_width; ++i) {
         accum[i] = Mix(accum[i], x[i], BlockWrapper::LoadBlock(seeds));
         seeds += sizeof(Block) / sizeof(uint64_t);
@@ -662,14 +699,19 @@ struct EhcBadger {
     }
   };
 
-  static void DfsGreedyFinalizer(const Block stack[][fanout][out_width],
-                                 const int stack_lengths[], const char* char_input,
+  template<bool badger>
+  static void DfsGreedyFinalizer(Block stack[][fanout][out_width],
+                                 int stack_lengths[], const char* char_input,
                                  size_t char_length, const uint64_t* entropy,
                                  uint64_t output[out_width]) {
     BlockGreedy b(entropy);
-    for (int j = 0; stack_lengths[j] > 0; ++j) {
-      for (int k = 0; k < stack_lengths[j]; k += 1) {
-        b.Insert(stack[j][k]);
+    if (badger) {
+      b.Insert(CompactDfsTree(stack, stack_lengths, entropy));
+    } else {
+      for (int j = 0; stack_lengths[j] > 0; ++j) {
+        for (int k = 0; k < stack_lengths[j]; k += 1) {
+          b.Insert(stack[j][k]);
+        }
       }
     }
 
@@ -824,7 +866,7 @@ inline uint64_t TabulateBytes(uint64_t input, const uint64_t entropy[256 * width
 }
 
 template <typename BlockWrapper, unsigned dimension, unsigned in_width,
-          unsigned encoded_dimension, unsigned out_width>
+          unsigned encoded_dimension, unsigned out_width, bool badger>
 void Hash(const uint64_t* entropy, const char* char_input, size_t length,
           uint64_t output[out_width]) {
   constexpr unsigned kMaxStackSize = 9;
@@ -844,8 +886,9 @@ void Hash(const uint64_t* entropy, const char* char_input, size_t length,
   char_input += used_chars;
 
   EhcBadger<BlockWrapper, dimension, in_width, encoded_dimension, out_width,
-            kFanout>::DfsGreedyFinalizer(stack, stack_lengths, char_input,
-                                         length - used_chars, entropy, output);
+            kFanout>::template DfsGreedyFinalizer<badger>(stack, stack_lengths,
+                                                          char_input, length - used_chars,
+                                                          entropy, output);
 }
 
 template <typename Block, unsigned count>
@@ -1000,22 +1043,22 @@ inline uint64_t TabulateAfter(const uint64_t* entropy, const char* char_input,
   return result;
 }
 
-#define HASH_WRAP(isa, block)                                                         \
-  template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,        \
-            unsigned out_width>                                                       \
-  inline void isa(const uint64_t* entropy, const char* char_input, size_t length, \
-                      uint64_t output[out_width]) {                                   \
-    return Hash<block, dimension, in_width, encoded_dimension, out_width>(  \
-        entropy, char_input, length, output);                                         \
+#define HASH_WRAP(isa, block)                                                      \
+  template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,     \
+            unsigned out_width, bool badger>                                       \
+  inline void isa(const uint64_t* entropy, const char* char_input, size_t length,  \
+                  uint64_t output[out_width]) {                                    \
+    return Hash<block, dimension, in_width, encoded_dimension, out_width, badger>( \
+        entropy, char_input, length, output);                                      \
   }
 
 #define HASH_WRAP_REPEAT(isa, block, count)                                          \
   template <unsigned dimension, unsigned in_width, unsigned encoded_dimension,       \
-            unsigned out_width>                                                      \
+            unsigned out_width, bool badger>                                         \
   inline void isa(const uint64_t* entropy, const char* char_input, size_t length,    \
                   uint64_t output[out_width]) {                                      \
     return Hash<RepeatWrapper<block, count>, dimension, in_width, encoded_dimension, \
-                out_width>(entropy, char_input, length, output);                     \
+                out_width, badger>(entropy, char_input, length, output);             \
   }
 
 #if __AVX512F__
@@ -1044,32 +1087,39 @@ HASH_WRAP_REPEAT(V2Scalar, BlockWrapperScalar, 2)
 HASH_WRAP_REPEAT(V3Scalar, BlockWrapperScalar, 4)
 HASH_WRAP_REPEAT(V4Scalar, BlockWrapperScalar, 8)
 
-template <unsigned out_width>
-inline void V4(const uint64_t* entropy, const char* char_input, size_t length,
-               uint64_t output[out_width]);
-template <unsigned out_width>
-inline void V3(const uint64_t* entropy, const char* char_input, size_t length,
-               uint64_t output[out_width]);
-template <unsigned out_width>
-inline void V2(const uint64_t* entropy, const char* char_input, size_t length,
-               uint64_t output[out_width]);
-template <unsigned out_width>
-inline void V1(const uint64_t* entropy, const char* char_input, size_t length,
-               uint64_t output[out_width]);
+#define VONLY(name)                                                                \
+  template <unsigned out_width>                                                    \
+  inline void name(const uint64_t* entropy, const char* char_input, size_t length, \
+                   uint64_t output[out_width]);
 
-#define SPECIALIZE(version, isa, out_width, dimension, in_width, encoded_dimension)  \
-  template <>                                                                        \
-  inline void V##version<out_width>(const uint64_t* entropy, const char* char_input, \
-                                    size_t length, uint64_t output[out_width]) {     \
-    return V##version##isa<dimension, in_width, encoded_dimension, out_width>(       \
-        entropy, char_input, length, output);                                        \
+VONLY(V4true)
+VONLY(V4false)
+VONLY(V3true)
+VONLY(V3false)
+VONLY(V2true)
+VONLY(V2false)
+VONLY(V1true)
+VONLY(V1false)
+
+#define SPECIALIZE(version, isa, out_width, dimension, in_width, encoded_dimension,    \
+                   badger)                                                             \
+  template <>                                                                          \
+  inline void V##version##badger<out_width>(const uint64_t* entropy,                   \
+                                            const char* char_input, size_t length,     \
+                                            uint64_t output[out_width]) {              \
+    return V##version##isa<dimension, in_width, encoded_dimension, out_width, badger>( \
+        entropy, char_input, length, output);                                          \
   }
 
-#define SPECIALIZE_4(version, isa)      \
-  SPECIALIZE(version, isa, 5, 5, 3, 9)  \
-  SPECIALIZE(version, isa, 4, 7, 3, 10) \
-  SPECIALIZE(version, isa, 3, 7, 3, 9)  \
-  SPECIALIZE(version, isa, 2, 6, 3, 7)
+#define SPECIALIZE_2(version, isa, badger)      \
+  SPECIALIZE(version, isa, 5, 5, 3, 9, badger)  \
+  SPECIALIZE(version, isa, 4, 7, 3, 10, badger) \
+  SPECIALIZE(version, isa, 3, 7, 3, 9, badger)  \
+  SPECIALIZE(version, isa, 2, 6, 3, 7, badger)
+
+#define SPECIALIZE_4(version, isa) \
+  SPECIALIZE_2(version, isa, true) \
+  SPECIALIZE_2(version, isa, false)
 
 #if __AVX512F__
 
@@ -1114,7 +1164,7 @@ constexpr size_t kEntropyBytesNeeded =
     256 * 3 * sizeof(uint64_t) * sizeof(uint64_t) +
     advanced::GetEntropyBytesNeeded<
         advanced::RepeatWrapper<advanced::BlockWrapperScalar, 8>, 2>(~0ul);
-
+  /*
 inline uint64_t HalftimeHashStyle512(
     const uint64_t entropy[kEntropyBytesNeeded / sizeof(uint64_t)], const char input[],
     size_t length) {
@@ -1138,5 +1188,5 @@ inline uint64_t HalftimeHashStyle64(
     size_t length) {
   return advanced::TabulateAfter<advanced::V1<2>, 2>(entropy, input, length);
 }
-
+  */
 }  // namespace halftime_hash
