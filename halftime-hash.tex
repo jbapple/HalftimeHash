@@ -170,7 +170,7 @@ HalftimeHash is similar to a tree-like hash as described by Carter and Wegman. \
 The leaves of a tree are the words of the input string, while the root is the output hash value.
 Each level of edges is represented by a single hash function chosen at random from an AU family, so a total of $\Theta(\lg n)$ functions are chosen.
 
-More concretely, $H(s_0,\langle{}a,b\rangle)$ is a tree hash execution of height 1, hashing the string $ab$, $H(s_1, \langle H(s_0, \langle a,b\rangle), H(s_0, \langle c,d\rangle)\rangle)$ is a tree hash execution of height 2, hashing the string $abcd$, and so on.
+More concretely, $H(s_0,\langle{}a,b\rangle)$ is a tree hash execution of height 1, hashing the string $ab$, $H(s_1, \langle H(s_0, \langle a,b\rangle), H(s_0, \langle c,d\rangle)\rangle)$ is a tree hash execution of height 2, hashing the string $a b c d$, and so on.
 Note that the seed $s_0$ is used for all executions of height 1 -- this is sufficient (but not necessary) to ensure a tree hash is AU.
 
 Carter and Wegman show that if $H$ is $\varepsilon$-AU, then a tree of height $m$ is $m\varepsilon$-AU.
@@ -832,7 +832,7 @@ HalftimeHash passes all correctness and randomness tests in the SMHasher test su
   \includegraphics[width=\textwidth]{smhasher-speed.eps}
 \caption{
   \label{smhasher-speed}
-    The two fastest variants of HalftimeHash are faster than all hash families in the SMHasher suite on 256Kib strings on an i7-7800x, even families that come with no AU guarantees. \protect\cite{smhasher}
+    The two fastest variants of HalftimeHash are faster than all hash families in the SMHasher suite on 256KiB strings on an i7-7800x, even families that come with no AU guarantees. \protect\cite{smhasher}
     Of the families here, only HalftimeHash and xxh128 pass all SMHasher tests, and only HalftimeHash and clhash are AU.
 }
 \end{figure}
