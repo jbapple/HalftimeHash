@@ -88,9 +88,11 @@
 
 \begin{abstract}
 HalftimeHash is a new algorithm for hashing long strings.
-The goals are few collisions (different inputs that produce identical output hash values), high performance, and portability -- HalftimeHash should be easy to implement correctly on new ISA's and easy to code in almost any programming language.
+The goals are few collisions (different inputs that produce identical output hash values) and high performance.
 
 Compared to the fastest universal hash functions on long strings (clhash and UMASH) HalftimeHash decreases collision probability while also increasing performance by over 50\%.
+
+In addition, HalftimeHash does not use any widening 64-bit multiplications or any finite field arithmetic that could limit its portability.
 
 \keywords{Universal hashing \and Randomized algorithms}
 \end{abstract}
@@ -111,16 +113,31 @@ This technique applies not only to hash tables, but also to message-authenticati
 
 On strings longer than 1KB, HalftimeHash is typically 55\% faster than clhash, the AU hash family that comes closest in performance.
 
+HalftimeHash also has tunable output length and low probabilities of collision for applications that require them, such as one-time authentication. \cite{nacl}
+The codomain has size 16, 24, 32, or 40 bytes, and $\varepsilon$ varies depending on the codomain (see Figure \ref{frontier} and Section \ref{analysis}).
+
+\subsection{Portability}
+
 In addition to high speed on long strings, HalftimeHash is designed for a simple implementation that is easily portable between programming languages and machine ISA's.
 HalftimeHash uses less than 1200 lines of code in C++ and can take advantage of vector ISA extensions like AVX-512, AVX2, SSE, and NEON.
 
-HalftimeHash also has tunable output length and low probabilities of collision for applications that require them, such as one-time authentication. \cite{nacl}
-The codomain has size 16, 24, 32, or 40 bytes, and $\varepsilon$ varies depending on the codomain (see Figure \ref{frontier} and Section \ref{analysis}).
+In HalftimeHash, no 64-bit-mul\-ti\-pli\-ca\-tions are needed.
+This is in support of two goals --
+the first is portability to platforms or programming languages without native widening unsigned 64-bit multiplications.
+Languages like Java, Python, and Swift can do these long multiplications, but not without calling out to C or slipping into arbitrary-precision-integer code.
+
+% TODO: check this
+
+The other reason HalftimeHash avoids 64-bit multiplications is SIMD-friend\-li\-ness.
+The x86-64 ISA extensions SSE2, AVX2, and AVX-512F all contain instructions to simultaneously multiply multiple pairs of 32-bit words, producing multiple 64-bit values.
+Aarch64 has similar instructions in the NEON set.
+% The POWER ISA also contains this, but only on 128 bits at once?
+
 
 \subsection{Prior work}
 
 There are a number of fast hash algorithms that run at rates exceeding 8 bytes per cycle on modern x86-64 processors, including Fast Positive Hash, falk\-hash, xxh, Meow\-Hash, and UMASH, and cl\-hash. \cite{smhasher}
-Of these, only cl\-hash and U\-MASH include claims of being AU.
+Of these, only cl\-hash and U\-MASH include claims of being AU; each of these uses finite fields and the x86-64 instruction for carryless (polynomial) multiplication.
 Other previous work on AU hashing long strings is no longer as competitive, performance-wise, as it once was, including UHASH and VHASH. \cite{clhash,umac,vmac}
 
 % \subsection{Results}
@@ -208,17 +225,6 @@ where $d, s \in \ints_{2^{32}}^{2m+2}$ are the input string and the seed, respec
 The $d_j + s_j$ additions are in the ring $\ints_{2^{32}}$, while all other operations are in the ring $\ints_{2^{64}}$.
 NH is $2^{-32}$-AU.
 
-In HalftimeHash, no 64-bit-mul\-ti\-pli\-ca\-tions are needed.
-This is in support of two goals --
-the first is portability to platforms or programming languages without native widening unsigned 64-bit multiplications.
-Languages like Java, Python, and Swift can do these long multiplications, but not without calling out to C or slipping into arbitrary-precision-integer code.
-
-% TODO: check this
-
-The other reason HalftimeHash avoids 64-bit multiplications is SIMD-friend\-li\-ness.
-The x86-64 ISA extensions SSE2, AVX2, and AVX-512F all contain instructions to simultaneously multiply multiple pairs of 32-bit words, producing multiple 64-bit values.
-Aarch64 has similar instructions in the NEON set.
-% The POWER ISA also contains this, but only on 128 bits at once?
 
 %% HalftimeHash uses both NH as described above and a weakened version of NH:
 
