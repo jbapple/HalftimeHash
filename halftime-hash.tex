@@ -817,15 +817,16 @@ Intel's VTune tool show the same thing: 86\% of the clock cycles are spent in th
 This section covers performance testing for HalftimeHash, especially compared to clhash and UMASH, the two fastest AU families on long strings.
 Each of those are based on NH over $\ints_2[x]$, rather than $\ints_{2^{64}}$.
 
-HalftimeHash can vary over three dimensions:
+%% HalftimeHash can vary over three dimensions:
 
-\begin{itemize}
-\item Block size, the number of instances interleaved in each execution
-\item Output size, which varies from 16 bytes to 40 bytes in this implementation
-\item ISA, which varies from the C++ virtual machine (in other words, scalar operations on \texttt{uint32\_t}s) to AVX-512
-\end{itemize}
+%% \begin{itemize}
+%% \item Block size, the number of instances interleaved in each execution
+%% \item Output size, which varies from 16 bytes to 40 bytes in this implementation
+%% \item ISA, which varies from the C++ virtual machine (in other words, scalar operations on \texttt{uint32\_t}s) to AVX-512
+%% \end{itemize}
 
-In addition to the performance testing here, HalftimeHash passes all correctness tests in the SMHasher test suite; for a performance comparison, see Figure \ref{smhasher-speed} and \cite{smhasher}.
+%In addition to the performance testing here,
+HalftimeHash passes all correctness and randomness tests in the SMHasher test suite; for a performance comparison, see Figure \ref{smhasher-speed} and \cite{smhasher}.
 
 \begin{figure}
   \includegraphics[width=\textwidth]{smhasher-speed.eps}
@@ -836,7 +837,7 @@ In addition to the performance testing here, HalftimeHash passes all correctness
 }
 \end{figure}
 
-Figure \ref{frontier} displays the tension between higher output entropy and higher throughput.
+Figure \ref{frontier} displays the relationship between output entropy and throughput.
 Adding more output entropy increases the number of multiplications and additions that HalftimeHash (or clhash, or UMASH) has to perform.
 Nandi showed that this is true in the general case, as there is a matching upper and lower bound for the number of non-linear operations to be performed for a certain hash output width. \cite{ehc-nandi}
 
