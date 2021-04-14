@@ -1,9 +1,15 @@
-@misc{ehc-nandi,
-    author = {Mridul Nandi},
-    title = {On the Minimum Number of Multiplications Necessary for Universal Hash Constructions},
-    howpublished = {Cryptology ePrint Archive, Report 2013/574},
-    year = {2013},
-    note = {\url{https://eprint.iacr.org/2013/574}},
+@InProceedings{ehc-nandi,
+author="Nandi, Mridul",
+editor="Cid, Carlos
+and Rechberger, Christian",
+title="On the Minimum Number of Multiplications Necessary for Universal Hash Functions",
+booktitle="Fast Software Encryption",
+year="2015",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="489--508",
+abstract="Let {\$}{\$}d {\backslash}ge 1{\$}{\$}be an integer and {\$}{\$}R{\_}1{\$}{\$}be a finite ring whose elements are called block. A {\$}{\$}d{\$}{\$}-block universal hash over {\$}{\$}R{\_}1{\$}{\$}is a vector of {\$}{\$}d{\$}{\$}multivariate polynomials in message and key block such that the maximum differential probability of the hash function is ``low''. Two such single block hashes are pseudo dot-product (PDP) hash and Bernstein-Rabin-Winograd (BRW) hash which require {\$}{\$}{\backslash}frac{\{}n{\}}{\{}2{\}}{\$}{\$}multiplications for {\$}{\$}n{\$}{\$}message blocks. The Toeplitz construction and {\$}{\$}d{\$}{\$}independent invocations of PDP are {\$}{\$}d{\$}{\$}-block hash outputs which require {\$}{\$}d {\backslash}times {\backslash}frac{\{}n{\}}{\{}2{\}}{\$}{\$}multiplications. However, here we show that at least{\$}{\$}(d-1) + {\backslash}frac{\{}n{\}}{\{}2{\}}{\$}{\$}multiplications are necessary to compute a universal hash over {\$}{\$}n{\$}{\$}message blocks. We construct a {\$}{\$}d{\$}{\$}-block universal hash, called EHC, which requires the matching{\$}{\$}(d -1) + {\backslash}frac{\{}n{\}}{\{}2{\}}{\$}{\$}multiplications for{\$}{\$}d {\backslash}le 4{\$}{\$}. Hence it is optimum and our lower bound is tight when {\$}{\$}d {\backslash}le 4{\$}{\$}. It has similar parllelizibility, key size like Toeplitz and so it can be used as a light-weight universal hash.",
+isbn="978-3-662-46706-0"
 }
 
 @misc{9-7-erasure-code,
@@ -112,15 +118,14 @@ note = {\url{https://www.itu.dk/people/pagh/papers/cuckoo-jour.pdf}}
 }
 
 @article{clhash,
-  author    = {Daniel Lemire and
-               Owen Kaser},
-  title     = {Faster 64-bit universal hashing using carry-less multiplications},
-  journal   = {{CoRR}},
-  volume    = {abs/1503.03465},
-  year      = {2015},
-  url       = {http://arxiv.org/abs/1503.03465},
-  archivePrefix = {arXiv},
-  eprint    = {1503.03465},
+  title={Faster 64-bit universal hashing using carry-less multiplications},
+  author={Lemire, Daniel and Kaser, Owen},
+  journal={Journal of Cryptographic Engineering},
+  volume={6},
+  number={3},
+  pages={171--185},
+  year={2016},
+  publisher={Springer}
 }
 
 @InProceedings{vmac,
@@ -254,18 +259,14 @@ url = {https://github.com/rurban/smhasher}
 }
 
 @article{lsm-survey,
-  author    = {Chen Luo and
-               Michael J. Carey},
-  title     = {LSM-based Storage Techniques: {A} Survey},
-  journal   = {CoRR},
-  volume    = {abs/1812.07527},
-  year      = {2018},
-  url       = {http://arxiv.org/abs/1812.07527},
-  archivePrefix = {arXiv},
-  eprint    = {1812.07527},
-  timestamp = {Tue, 01 Jan 2019 15:01:25 +0100},
-  biburl    = {https://dblp.org/rec/journals/corr/abs-1812-07527.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
+  title={LSM-based storage techniques: a survey},
+  author={Luo, Chen and Carey, Michael J},
+  journal={The VLDB Journal},
+  volume={29},
+  number={1},
+  pages={393--418},
+  year={2020},
+  publisher={Springer}
 }
 
 @Misc{rust-quadratic,
