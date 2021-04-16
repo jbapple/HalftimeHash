@@ -1,61 +1,16 @@
 \documentclass[runningheads]{llncs}
 
-%\documentclass{article}
-
- %% \documentclass[acmsmall, nonacm]{acmart}
-
- %% \geometry{twoside=false,
- %%   includeheadfoot, head=13pt, foot=2pc,
- %%   paperwidth=11in, paperheight=8.5in,
- %%   top=58pt, bottom=44pt, inner=46pt, outer=46pt,
- %%   marginparwidth=2pc,heightrounded
- %% }%
-
-
-%\usepackage[margin=1in]{geometry}
-%\usepackage{accsupp}
-%\usepackage{moreverb}
 \usepackage{amsfonts}
-\usepackage{amsmath}%,amsthm}
+\usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{color}
-%\usepackage{comment}
 \usepackage{graphicx}
-%backref
 \usepackage[pdfusetitle]{hyperref}
-%\usepackage{listings}
 \usepackage{microtype}
-%\usepackage{multirow}
-%\usepackage{newpxtext}
-%\usepackage{verbatim}
-%\usepackage{cleveref}
-%\usepackage{balance}
-%\usepackage{natbib}
-%\usepackage{wrapfig}
 
 \DeclareMathOperator{\adj}{adj}
 
 \renewcommand\UrlFont{\color{blue}\rmfamily}
-
-%% \lstloadlanguages{C++}
-
-%% \lstset{%
-%%   basicstyle=\ttfamily,%\small,
-%%   language=C++,
-%% %  breaklines=true,
-%%   columns=fullflexible,
-%% %  identifierstyle=\color{red},
-%%   showstringspaces=false,
-%%   commentstyle=\color[rgb]{0.5,0,0}\itshape,
-%%   %backgroundcolor=\color[rgb]{0.92,0.92,1}
-%% }
-
-%\pagenumbering{gobble}
-%\pagestyle{empty}
-
-%\newtheorem{theorem}{Theorem}
-%\newtheorem*{lemma}{Lemma}
-%\newtheorem*{claim}{Claim}
 
 \newcommand{\reals}{\mathbb{R}}
 \newcommand{\rats}{\mathbb{Q}}
@@ -63,10 +18,6 @@
 \newcommand{\ints}{\mathbb{Z}}
 \newcommand{\cplx}{\mathbb{C}}
 \newcommand{\defeq}{\;\genfrac{}{}{0pt}{2}{\text{def}}{=}\;}
-
-%% \lstset{basicstyle=\ttfamily,
-%% escapeinside={||},
-%% mathescape=true}
 
 \newenvironment{blockquote}
 {\begin{quote}\itshape}
@@ -80,12 +31,7 @@
 \orcidID{0000-0002-8685-9451}}
 \institute{\email{jbapple@apache.org}}
 
-%\hypersetup{draft}
-
 \maketitle
-
-%\thispagestyle{fancyplain}
-%\thispagestyle{empty}
 
 \begin{abstract}
 HalftimeHash is a new algorithm for hashing long strings.
@@ -140,10 +86,6 @@ There are a number of fast hash algorithms that run at rates exceeding 8 bytes p
 Of these, only cl\-hash and U\-MASH include claims of being AU; each of these uses finite fields and the x86-64 instruction for carryless (polynomial) multiplication.
 Other previous work on AU hashing long strings is no longer as competitive, performance-wise, as it once was, including UHASH and VHASH. \cite{clhash,umac,vmac}
 
-% \subsection{Results}
-
-% TODO: graph this perf comparison with other non-universal families
-
 \section{Notations and Conventions}
 
 Input string length $n$ is measured in 64-bit words.
@@ -174,9 +116,6 @@ HalftimeHash24 has $\varepsilon < 2^{-83}$, as discussed in Section~\ref{analysi
 
 Except where otherwise mentioned, all benchmarks were run on an Intel i7-7800x (a Skylake chip that supports AVX512), running Ubuntu 18.04, with clang++ 11.0.1.
 
-%-++20201218093139+43ff75f2c3fe-1$\sim$exp1$\sim$20201218203800.157
-
-%For each machine configuration, we show the graph of the best performing compiler for each hash family, as defined by the throughput on input strings of length 250KB.
 
 \section{Algorithm}
 \label{algo}
@@ -185,29 +124,56 @@ Except where otherwise mentioned, all benchmarks were run on an Intel i7-7800x (
 
 HalftimeHash is similar to a tree-like hash as described by Carter and Wegman. \cite[Section 3]{carter-wegman-79}
 The leaves of a tree are the words of the input string, while the root is the output hash value.
-%% Each level of edges is represented by a single hash function chosen at random from an AU family, so a total of $\Theta(\lg n)$ functions are chosen.
-
-%% More concretely, $H(s_0,\langle{}a,b\rangle)$ is a tree hash execution of height 1, hashing the string $ab$, $H(s_1, \langle H(s_0, \langle a,b\rangle), H(s_0, \langle c,d\rangle)\rangle)$ is a tree hash execution of height 2, hashing the string $a b c d$, and so on.
-%% Note that the seed $s_0$ is used for all executions of height 1 -- this is sufficient (but not necessary) to ensure a tree hash is AU.
 
 To hash a string, we use $\lceil \lg n \rceil$ hash families $H_i$ that hash two characters down to one and the $\lceil \lg n \rceil$ randomly-selected keys $k_i$.
 Now for any $n \in \nats$ let $\lfloor\!\lfloor n \rfloor\!\rfloor$ denote the largest power of $2$ that is less than $n$.
-Let $\langle a,b,c \rangle$ represent a string with the characters $a$, $b$, and $c$, in that order.
-Then the tree $T$ hash of a string $s[0,n)$ is defined as
+Let $\langle a,b,c \rangle$ denote a string with the characters $a$, $b$, and $c$, in that order.
+Then the tree hash $T$ of a string $s[0,n)$ is defined as
 
-\[
-T(\langle x \rangle) \defeq x
-\]
 \begin{equation}
 \label{algebraic-badger}
-T(s[0,n)) \defeq H_{ \lg \lfloor\!\lfloor n \rfloor\!\rfloor}
+\begin{array}{l}
+T(k, \langle x \rangle) \defeq x \\
+T(k, s[0,n)) \defeq H_{ \lg \lfloor\!\lfloor n \rfloor\!\rfloor}
 (k_{ \lg \lfloor\!\lfloor n \rfloor\!\rfloor},
-T(s[0,\lfloor\!\lfloor n \rfloor\!\rfloor),
-  T(s[\lfloor\!\lfloor n \rfloor\!\rfloor, n) )))
+T(k, s[0,\lfloor\!\lfloor n \rfloor\!\rfloor),
+T(k, s[\lfloor\!\lfloor n \rfloor\!\rfloor, n) )))
+\end{array}
 \end{equation}
 
-Carter and Wegman show that if each $H$ is $\varepsilon$-AU, then a tree of height $m$ is $m\varepsilon$-AU.
-%The Badger construction (\cite{badger}) shows how to manage strings where there is a mismatch in the input and output arity at some levels without negatively impacting the universality.
+Carter and Wegman show that if each $H$ is $\varepsilon$-AU, $T$ is $m\varepsilon$-AU for input that has length exactly $2^m$.
+Later this was extended to strings with lengths other than are not a power of two.~\cite{badger}
+The key lemma is that almost universality is composable:
+
+\begin{lemma}[Carter and Wegman]
+  If $F, G,$ and $H$ are all universal families, then so are
+  \begin{itemize}
+    \item $\langle F, G\rangle$ where $\langle F, G \rangle(\langle k_F, k_G \rangle, \langle x, y \rangle) \defeq \langle F(k_F,x), G(k_G,y) \rangle$.
+  \item $F \circ G$ where $(F \circ G) (\langle k_F, k_G \rangle, x) \defeq F(k_F,G(k_G, x))$
+  \item $F \circ \langle G,H \rangle$ where $(F \circ \langle G,H \rangle) (\langle k_F, k_G, k_H \rangle , \langle p,q \rangle) \defeq F(k_F, G(k_G,p), H(k_H, q))$ is a family parameterized by the combination of keys for $F$ , $G$, and $H$, even if $G = H$ and $k_G = k_H$.
+  \end{itemize}
+\end{lemma}
+
+For HalftimeHash, define $\widehat{H}$ as a family taking as input strings of any length $n$ and producing strings of length $\lceil \lg n \rceil$ as follows:
+
+\begin{equation}
+%\label{algebraic-badger}
+\begin{array}{l}
+\widehat{H}_0(k, \langle \rangle) \defeq \langle \bot \rangle \\
+\widehat{H}_0(k, \langle x \rangle) \defeq \langle x \rangle \\
+\widehat{H}_{i+1}(k, s[0,n)) \defeq \left\{ 
+  \begin{array}{rcll}
+   \bot &\triangleleft& \widehat{H}_i(k, s[0,n)) &  2^i > n \\
+    T(k, s[0, 2^i))) &\triangleleft& \widehat{H}_{i}(k,s[2^i, n)) & 2^i \le n
+  \end{array}
+  \right.
+\end{array}
+\end{equation}
+
+where $\bot$ is a symbol not otherwise in the alphabet, $\triangleleft$ prepends a character onto a string.
+By an induction usingg the composition lemma, $\widehat{H}$ is $\varepsilon \lg n$-AU, and $G \circ \widehat{H}$ is $(\delta + \varepsilon \lg n)$-AU if $G$ is $\delta$-AU.
+
+This example uses families $H_i$ that take two characters as input, but this can be easily extended to hash functions taking more input (but requiring larger keys).
 
 A novel implementation choice in HalftimeHash is using an erasure coding of the input in the leaves.
 The central idea is called ``EHC'', for {\em Encode, Hash, Combine}. \cite{ehc-nandi}
@@ -216,24 +182,6 @@ This decreases the probability of collisions by a factor of $\varepsilon^{k-1}$.
 
 The remainder of this section will introduce a number of components previously introduced in the literature, including NH, EHC, and tree hashing.
 This paper synthesizes them into a single implementation and introduces an enhancement to EHC that eliminates the multiplications associated with it and replaces them with a small number of shifts and additions.
-
-
-%% \begin{figure}
-%% \includegraphics[width=\textwidth]{Diagram2.eps}
-%% \caption{
-%%   \label{tree}
-%%   A simplified example of the tree hash shape used in HalftimeHash.
-%%   At the leaves are the input blocks to be hashed.
-%%   Each instance of seven words is initially encoded and then hashed down to three blocks in a process called ``EHC''. \cite{ehc-nandi}
-%%   Following that, three copies of Carter-Wegman-style tree hash run on each of the components produced during the EHC step.
-%%   Note that the right-most blocks bypass one round of hashing.
-%%   This is equivalent to hashing with the identity function, which has $\varepsilon = 0$, and so allows the values to pass-through without adding any extra collision probability. \cite{badger}
-%% }
-%% \end{figure}
-
-%% Section \ref{algo} focuses on a particular instantiation of HalftimeHash with distance $3$, producing a hash value $24$ bytes in size.
-%% Adding variants with different distances is direct, and the benchmarking results below include variants with distance 2, 4, and 5.
-%% The distance-3 version has $\varepsilon < 2^{-83}$, as discussed in Section \ref{analysis}.
 
 \subsection{The NH hashing primitive}
 
@@ -247,19 +195,6 @@ NH is $2^{-32}$-AU.
 
 NH is used at the leaves of tree hash to decrease the input length of the input string by a constant factor.
 
-%% HalftimeHash uses both NH as described above and a weakened version of NH:
-
-%% \[
-%% d_0 + 2^{32} d1 + \sum_{i=1}^m (d_{2i} + s_{2i})(d_{2i+1} + s_{2i+1})
-%% \]
-
-%% This version is still $2^{-32}$-AU, but it loses a condition called {\em$ \varepsilon$-almost $\Delta$-universal} ($\varepsilon$-A$\Delta$U).
-%% A$\Delta$U is strictly stronger then AU, but is not needed in every part of HalftimeHash.
-%% Section \ref{analysis} discusses this in more detail.
-
-%The default is 8, saving $12.5\%$ of the erstwhile $n/8 \pm O(1)$ multiplications to hash strings of length $n$.
-
-%Now we can build the hash function referenced above, which takes a Block of values and a Block of entropy, spitting out a hashed Atom that can later be collapse via %addition to yield the almost-delta-universal NH family.
 
 \subsection{Encode-Hash-Combine}
 
@@ -270,51 +205,14 @@ At the leaves of the tree, HalftimeHash uses the EHC algorithm: \cite{ehc-nandi}
 \item Each item in the encoded sequence is hashed using NH with an independently chosen seed.
 \item A linear transformation $T$ is applied to the resulting sequence of hash values.
   $T$ must have the property that any $k$ columns of it are linearly independent.
-%  A linear transformation with this property is said to be {\em d-MDS}.
 \end{enumerate}
 
 This reduces the input length of the string by a constant factor.
 
-%% Nandi proves that if the hash family used in step 2 is $\varepsilon$-A$\Delta$U, then the output of step 3 is $\varepsilon^d$-A$\Delta$U.
-%% In contrast, to avoid slow operations over finite fields, HalftimeHash uses a non-linear erasure code and a linear transformation $T$ with a looser constraint on the invertability; see below.
-
-%% Additionally, the other components of HalftimeHash do not depend on EHC being A$\Delta$U, only AU.
-%% Just as in NH, this saves HalftimeHash a percentage of multiplications.
-%% See Section \ref{analysis} for more details.
-
-%% \subsubsection{Erasure coding}
-
-%% One key aspect of the efficiency of HalftimeHash is that the additional size added by encoding the input string is low as a percentage of the total hashed data.
-%% For every 7 words that are fed into step 1 of EHC, 9 words emerge from step 2.
-%% The lower that ratio ($9/7$) is, the fewer multiplications that HalftimeHash does.
-%% %By the Singleton bound, A code with minimum distance $d$ must be at least $d-1$ characters longer than the pre-encoded data.
-%% However, in order to use large blocks, the matrix $T$ must grow as well.
-%% For finite fields, this is not an issue, but in $\ints_{2^{64}}$, as discussed in Section \ref{analysis}, it becomes a constraint satisfaction problem to find matrices that preserve entropy.
-%% %While this work can be done offline, it's not obvious the effort will yield good results.
-
-%% Instead of using large blocks, HalftimeHash uses a short erasure code but uses SIMD to maintain high throughput.
-%% All operations extend pointwise, and HalftimeHash hashes eight different parts of the string simultaneously.\footnote{Fewer than eight are interleaved for narrower SIMD registers like AVX2's 256-bit registers.}
 
 HalftimeHash uses a non-linear erasure code discovered by Gab\-ri\-el\-yan. \cite{9-7-erasure-code}
 It maps seven 3-tuples to nine 3-tuples with a minimum distance of three.
 
-%% Gabrielyan's code produces 2 additional 3-tuples without altering the seven inputs.
-%% The first additional tuple is just the \texttt{xor} of the seven input words.
-%% The second tuple is the following sum, numbering the input words as $(x_0, y_0, z_0)$, $(x_1, y_1, z_1)$, $\dots$.
-
-%% \begin{displaymath}
-%%   \begin{array}{rlcr}
-%%        & (x_0, & y_0, & z_0)\\
-%% \oplus & (y_1,  & z_1,  & x_1 \oplus{} y_1) \\
-%% \oplus & (x_2 \oplus{} y_2,& y_2 \oplus{} z_2,& x_2 \oplus{} y_2 \oplus{} z_2)\\
-%% \oplus & (z_3,    &x_3 \oplus{} y_3,& y_3 \oplus{} z_3) \\
-%% \oplus & (x_4 \oplus{} z_4,& x_4,& y_4)\\
-%% \oplus & (y_5 \oplus{} z_5,& x_5 \oplus{} y_5 \oplus{} z_5,& x_5\oplus{}z_5)\\
-%% \oplus & (x_6 \oplus{} y_6 \oplus{} z_6,& x_6 \oplus{} z_6,& x_6)
-%%   \end{array}
-%% \end{displaymath}
-
-%% While {\em linear} erasure codes on $\ints_2$ exist, they do not achieve as ratio as low as $9/7$ for codes with minimum distance 3. \cite{codetables.de}
 
 \subsubsection{Transform cost}
 
@@ -336,7 +234,6 @@ Instead, HalftimeHash uses a matrix $T$ selected so that the largest power of 2 
 The consequences on collision probability are discussed in Section \ref{analysis}.
 
 HalftimeHash uses the $3 \times 9$ matrix below.
-% Applying this matrix to a vector of hash values requires 6 shift operations and 18 additions.
 
 \begin{displaymath}
   \left(
@@ -396,37 +293,6 @@ A more detailed description is in the overview of Section \ref{algo}.
 For the tree hashing at internal nodes (above the leaf nodes, which use EHC), three tree hashes are executed with independently-chosen seeds, producing output entropy of $-3 \lg \varepsilon$.
 From the result from Carter and Wegman on the entropy of tree hash of a tree of height $m$, the resulting hash function is $m\varepsilon^3$-AU.
 
-%These three hashes are run on the three output values of EHC.
-%The collision probabilities on the outputs are independent (discussed below), and so three independent hashes with independent keys has the same effect 
-
-% For HalftimeHash, $H_1$ is EHC and $H_i, i > 1$ are NH.
-
-
-
-%% The three hash applications 
-
-%% Let $H_1, H_2, \dots$ be $\varepsilon_i$-AU hash families, possibly identical, and let $S_1, S_2, \dots$ be their sets of seeds.
-%% Each $H_i$ takes as input a seed from $S_i$ and a block of $d_i$ characters, producing as output blocks of $c_i < d_i$ characters.
-
-%% To hash a string of length $n$, first treat it as a string of length $\lfloor n / d_i \rfloor$ blocks of $d_i$ characters each, with $n - d_i\lfloor n/d_i\rfloor$ remaining characters at the end, not in any block.
-%% Randomly select an $s \in S_1$ and apply $H_1$ with $s$ to each block, concatenating the outputs, then appending the remaining $n-d_i\lfloor n/d_i\rfloor$ characters to that output.
-%% This family takes as input a single seed from $S_1$ and a string $x$ of arbitrary length, $n$, and produces a string of length $(d_1 - c_1)\lfloor n / c_1 \rfloor + n$; we will call it $G_1$.
-
-%% It is trivially extensible to all $H_i \mapsto G_i$.
-%% Let $\widehat{G} \triangleq \bigcirc_i G_i$ be the composition of these, stopping when the output is small enough that the next $G_i$ cannot be applied.
-%% The stopping point increases with string size.
-%% Assume all $G_i$ share $c_1$ and $d_1$ and that $d_1 | c_1$
-%% Then the longest string that only takes $m$ $G_i$'s has length $d_1 (c_1 / d_1)^m$.
-
-%% For instance, if $c_1 = 2$ and $d_1 = 1$, then the result of hashing a string $x$ of length three is $H_2(s_2, H_1(s_1, x_1, x_2), x_3)$.
-%% If $x$ has length four, the result is $H_2(s_2, H_1(s_1, x_1, x_2), H_1(s_1, x_3, x_4))$.
-%% Note that the seed $s_1$ is re-used; this is discussed in more detail below.
-
-% \subsubsection{Traversal strategies}
-
-%% The repeated application of the $H_i$ outlined there can be viewed as a tree-like structure with branching factors $\lceil d_i / c_i \rceil$.
-%% The input blocks are the leaves, and the final output is at the root.
-%% As described above, this is an itererative process, starting from $G_1$ being applied to the entire input, then $G_2$ applied to the entire output of $G_1$, and so on.
 
 Rather than Carter and Wegman's breath-first approach to tree hash, which uses $\Theta(n)$ space on each execution, or a recursive approach that proved to be prohibitively slow, HalftimeHash uses a depth-first post-order using iteration rather than recursion.
 The iteration creates a stack of levels for each of the 3 instances.
@@ -444,82 +310,25 @@ This saves an addition and a multiplication, improving the speed in practice.
 Rather than tree hashing, hash families like Poly1305, clhash, and UMASH use polynomial hashing (based on Horner's method) to hash variable-length strings down to fixed-size output.
 That approach requires 64-bit multiplication and also reduction modulo a prime (in $\ints$ or in $\ints_2[x]$), limiting its usability in SIMD ISA extensions.
 
-%% \begin{itemize}
-%% \item The empty sequence is a number; it represents the value $0$.
-%% \item All non-empty sequences contain as their elements digits between $1$ and \texttt{fanout}.
-%% \item The value of a sequence is just as in a \texttt{fanout}-ary number system, with the added redundancy of \texttt{fanout} being a permitted digit.
-%%   For example, the number $(2,3)$ represents $2\cdot\texttt{fanout} + 3$, and $(1,0,0)$ represents the same number as $(\texttt{fanout},0)$.
-%% \end{itemize}
-
-%% One way to think about this is as a number system - each level represents a place, and the digits run from $1$ to \texttt{fanout}.
-%% (Three Blocks count as ``1'', six as ``2'', and so on.)
-%% Clearing a level is like ``carrying the 1'' in schoolbook arithmetic.
-
-%% When DfsTreeHash returns, the stack contains data in triplets such that each element of a triplet is a hash of the same data as the other parts.
-%% If these three parts are hashed into one new output, that increases the $\varepsilon$ to at least that of the new output.
-%% Since HalftimeHash's main hash has $\varepsilon \geq 2^{-32}$, we must keep these three parts separate until the whole input has a small enough amount of data to process with functions with $\varepsilon$ around $2^{-64}$.
-
 \subsection{Sweep}
-
-% TODO: try pass through to reduce the stack size and they sweep key size
 
 Once the tree hash portion of HalftimeHash is complete, there still remains data to hash.
 
 First, the tree hash leaves data in its stack - as many as $bf$ words of data per level per tree, where $b$ is the size of a block.
 The Badger hash family addresses this by promoting items from lower levels to upper levels following Equation~\ref{algebraic-badger}.
 This does not negatively affect the collision probability, as promotion is equivalent to hashing with the identity function, which has collision probability $\varepsilon = 0$.
-See Figure \ref{yes-badger} for a graphical representation for how this would work in HalftimeHash.
-
-\begin{figure}
-\includegraphics[width=\textwidth]{yes-badger.eps}
-\caption{\label{yes-badger}
-  A Badger-style stack sweep is shown here.
-  This instance contains $7 \cdot 3 \cdot 5 = 105$ words; each leaf box represents three words, all others represent just one word.
-  The dashed lines at the leaves show the EHC algorithm; all other lines are part of the tree hash.
-  The first 84 words and the last 21 words form perfect trees, leaving level 0 and level 2 occupied at the end of the tree hash.
-  Badger handles this with promotion (thick gray lines) and then continues tree hashing. \cite{badger}
-}
-\end{figure}
 
 This approach uses no additional entropy, but it does create dependencies between hashing that is closer to the leaves of the stack and hashing that is closer to the root, and testing revealed it to be slower in some cases.
 Instead, HalftimeHash uses NH to hash all of the data in the stack; see Figure \ref{no-badger}.
 The stack is itself treated as input to NH.
 This requires as much input entropy as the number of words in the stack.
 
-%% \begin{figure}
-%% \includegraphics[width=\textwidth]{no-badger.eps}
-%% \caption{\label{no-badger}
-%%   This instance is similar to Figure \ref{yes-badger}, but shows how the sweep of the stack is done in HalftimeHash.
-%%   Here, the curved lines represent shared NH instances.
-%%   This method hashes the stack directly, while Badger's sweep is an extended variant of tree hashing.
-%% }
-%% \end{figure}
 
 In addition to the data on the stack, there are some characters that have yet to be hashed at all: HalftimeHash's EHC design expects to be fed $7 \cdot 3 = 21$ words at each invocation, and no fewer, so there may be up to 20 words remaining at the end of the input string.
 Every word in this remainder is fed into into all three NH executions that were created when hashing the stack.
-%% For both, HalftimeHash uses the A$\Delta$U version of NH.
 
 HalftimeHash then returns the three NH sums, for a total of 24 bytes of output.
 
-%% The stack itself could hold as many as \texttt{(fanout - 1) * 3 * sizeof(Block)} characters in each level in as many as $\lfloor \log_f (n/3B) - 1 \rfloor$ levels.
-%% For a 128MiB file, $f = 8$, and $B = 64$, all of these combined could be as much as 8127 bytes!
-
-%% \[64*22-1+ 7*3*64* \lfloor \log_8 (2^{27}/3/64) - 1 \rfloor
-%% =
-%% 1407 + 1344* \lfloor 5 \rfloor
-%% =
-%% 8127
-%% \]
-
-%% There are many potential mechanisms to finalize this data.
-%% For a hash family with a goal of high throughput on {\em long} input strings, the importance of this part of the algorithm to total performance should be negligible.
-
-%% HalftimeHash hashes this data by hashing all leftover values (the ones in the stack and the ones leftover in the input that were not read by the tree hash) with the NH hash function, with seeds not used in the creation of the stack.
-
-%% The end result is three 64-bit values.
-%% These, along with the length, constitute the output of HalftimeHash.
-
-%% To reduce the size of the input, as well as to pass tests more stringent than the conditions defining almost-universal (or universe collapsing) hash families, HalftimeHash closes by using tabulation hashing to reduce the 256 bit value to 64 bits. \cite{tabulation}
 
 \section{Analysis}
 \label{analysis}
@@ -544,41 +353,12 @@ In the example from Section ~\ref{algo} and the code corresponding to it, \[(w, 
 \subsection{EHC}
 
 
-%%  \begin{wrapfigure}[8]{r}{0.5\textwidth}
-%%    \vspace{-1.5em}
-%% \begin{tabular}{|r|l|}
-%%     %% \hline {\bf Step} & {\bf EHC} \\
-%%     \hline {\bf Multiplications (each)} & $b e w$ \\
-%%     \hline {\bf Multiplications (total)} & $b e w \lfloor n / b d w\rfloor$ \\
-%%     \hline {\bf In Entropy} & $e w$ \\
-%%     \hline {\bf Out Entropy} & $k (32-p)$\\
-%%     \hline {\bf Output words (total)} & $k b \lfloor n / b d w\rfloor $\\
-%%     \hline
-%% \end{tabular}
-%%  \caption{Metrics for EHC in HalftimeHash}
-%%  \label{ehc-metrics}
-%% %% %\vspace{-2.5em}
-%%  \end{wrapfigure}
 
 
 In each EHC execution, $d w$ blocks are read in.
 They are converted to $e w$ blocks and then those $e w$ blocks are then hashed with NH to $e$ blocks.
 This uses $e w$ words of input entropy and performs $e w$ multiplications.
 
-%% -------------------------
-
-%% Another appealing aspect of the NH primitive is that it is not only almost-universal, it is also {\em$ \varepsilon$-almost $\Delta$-universal} ($\varepsilon$-A$\Delta$U):
-%% \[\forall \delta \in C, \forall x,y \in D, x \neq y \implies \mathrm{Pr}_{s \in S}[H(s, x) - H(s, y) = \delta] \leq \varepsilon \]
-%% Almost-$\Delta$ universality reduces the number of multiplications required.
-%% Given an almost-$\Delta$ universal family like $H$ from $C^k$ to $C$ for any $k \geq 1$, define a hash family $H'$ from $C^{k+1}$ to $C$ as $H'_s (d, x) \triangleq H_s(d) + x$, for $x \in C$; $H'$ is AU, though not A$\Delta$U.
-%% This saves a multiplication over a construction like $H_s(d) + H_{s'}(x)$.
-%% In HalftimeHash, the multiplication savings trade off with increased entropy requirements via a parameter the caller can set.
-
-%% Additionally, the other components of HalftimeHash do not depend on EHC being A$\Delta$U, only AU.
-%% Just as in NH, this saves HalftimeHash a percentage of multiplications.
-
-
-%% -----------------------
 
 As for collision probability, Nandi proved that if the EHC matrix product is over a finite field, EHC is $2^{-32k}$-AU.
 $\ints_{2^{64}}$ is not a finite field, but the structure of this proof that EHC in HalftimeHash is AU is similar to the structure of Nandi's proof, so a variant of that is presented here as a warm-up.  \cite{ehc-nandi}
@@ -663,25 +443,6 @@ If the distance were less than $k$, then either the matrix would be smaller in b
 
 
 
-%%So following Table \ref{analysis-table}, we have
-
-%For the EHC step in HalftimeHash, we have the following metrics:
-
-%% \begin{tabular}{|l|c|c|c|}
-%%   \hline {\bf Step} & {\bf Mults (each)} & {\bf In Entropy (each)} & {\bf Out Entropy (each)}\\
-%%   \hline EHC & $b e(w-1)$ & $e(w-1)$ & $k(32-p)$\\
-%%   \hline
-%% \end{tabular}
-
-
-%For the EHC step in HalftimeHash, we have the following metrics:
-
-%For the EHC step in HalftimeHash, we have the following metrics:
-
-%The total metrics for EHC in HalftimeHash are in Figure~\ref{ehc-metrics}.
-
-%The total metrics for EHC in HalftimeHash are:
-
 
 
 \subsection{Tree hash}
@@ -699,29 +460,12 @@ The tree hash portion of EHC is $2^{ k\lg\left\lfloor\log_f \lfloor n/b d w\rflo
   A collision occurs for HalftimeHash at the tree hash stage if and only if each tree has a collision, which has probability $\left(\left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor 2^{-32}\right)^k$, assuming that the EHC step didn't already induce a collision. \qed
 \end{proof}
 
-%% The proof from Carter and Wegman does not need the primitive to be A$\Delta$U.
-%% As a result, EHC doesn't need to be A$\Delta$U, which means that the NH variant used in it does not need to be A$\Delta$U.
 
 The amount of entropy needed is proportional to the height of the tree, with $f - 1$ words needed for every level.
 HalftimeHash uses different seeds for the $k$ different trees, so the total number of 64-bit words of entropy used in the tree hash step is $(f - 1) k\left\lfloor\log_f \lfloor n/b d w\rfloor\right\rfloor$.
 
 The number of multiplications performed is identical to the number of input words. $k b \lfloor n / b d w \rfloor$.
 
-%% %% \begin{wrapfigure}[9]{L}{0.75\textwidth}
-%% %%   \vspace{-2em}
-%% \begin{tabular}{|r|l|}
-%% %    \hline {\bf } & {\bf Tree hash} \\
-%%     \hline {\bf Multiplications (each node)} & $b (f-1)$ \\
-%%     \hline {\bf Multiplications (total)} & $k b \lfloor n / b d w \rfloor$ \\
-%%     \hline {\bf In Entropy (each tree $\times$ level)} & $f-1$ \\
-%%     \hline {\bf In Entropy (total)} & $k (f-1) \left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor$ \\
-%%     \hline {\bf Out Entropy (total)} & $32k - k\lg\left\lfloor\log_f \lfloor n/b d w\rfloor\right\rfloor$\\
-%%     \hline {\bf Output words (total)} & $b f k \left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor$\\
-%%     \hline
-%% \end{tabular}
-%% %% \caption{Metrics for tree hash in HalftimeHash}
-%% %% \label{ehc-metrics}
-%% %\end{wrapfigure}
 
 \begin{tabular}{|r|c|c|}
   \hline & {\bf EHC} & {\bf Tree hash}\\
@@ -733,13 +477,6 @@ The number of multiplications performed is identical to the number of input word
   \hline {\bf Output words (total)} & $k b \lfloor n / b d w\rfloor $ & $b f k \left\lfloor \log_f \lfloor n / b d w \rfloor \right\rfloor$\\
   \hline
 \end{tabular}
-
-
-    %% \hline {\bf Multiplications (each)} & $b e w$ \\
-    %% \hline {\bf Multiplications (total)} & $b e w \lfloor n / b d w\rfloor$ \\
-    %% \hline {\bf In Entropy} & $e w$ \\
-    %% \hline {\bf Out Entropy} & $k (32-p)$\\
-    %% \hline {\bf Output words (total)} & $k b \lfloor n / b d w\rfloor $\\
 
 
 \subsection{Sweep}
@@ -754,8 +491,6 @@ For the untouched data, the number of words of entropy needed can be reduced by 
 Let $r$ be the sequence of random words used in the leftover part of the sweep.
 Instead of using $[r_{i b d w}, r_{(i+1)b d w})$ as the keys to hash component $i$ with, HalftimeHash uses $[r_{i}, r_{b d w + i})$.
 Both Nandi and Woelfel give proofs that this construction for multi-part hash output is A$\Delta$U. \cite{ehc-nandi,woelfel-toeplitz}
-
-%Instead of computing the $i$th component of the output using $b d w$ new words of entropy, the ith component 
 
 \subsection{Cumulative analysis}
 
@@ -786,92 +521,12 @@ HalftimeHash could be extended to carryless multiplication with no change in the
 
 
 
-%% \begin{tabular}{|l|c|c|c|c|c|c|}
-%%   \hline {\bf Step} & {\bf Multiplications} & {\bf In Entropy} & {\bf Out Entropy} & {\bf Out words}\\
-%%   \hline EHC & $e(w-1) \$ & $(32-p)k$ & 1 & $\lfloor n/dw \rfloor$ & $k \lfloor n/dw \rfloor$ \\
-%%   \hline Tree Hash & $f-1$ & $32k$ & $\left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ & $(f-1) k \lfloor n / d w \rfloor$ & $f k \left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ \\
-%%   \hline Sweep stack & $b f k \left\lfloor\log_f\lfloor n/d w \rfloor\right\rfloor$ & $32k$ & 1 & 1 & $k$ \\
-%%   \hline Sweep input & $n / b d w$ & $32k$ & 1 & 1 & $k$ \\
-%%   \hline
-%% \end{tabular}
-
-
-
-%% Finally, for the tabulation hashing of 32 bytes, \texttt{32 * 256 * 8 = 64KiB} of entropy is required.
-%% This is the majority of all of the entropy used by HalftimeHash.
-%% In entropy-constrained environments, users may wish to substitute finalizers that use less entropy, such as SipHash. \cite{siphash}
-
-%% Overall the cleaup requires $8 f \lfloor \log_f (n/3B) - 1 \rfloor + 66 B + 65536$ bytes of entropy.
-
-%% As for entropy provided, partially because of the long keys used in this section, the output before tabulation hashing is $(2^{-90} + 2^{-86} + 2^{-96})$-almost universal, with the $90$ coming from EHC and the $86$ coming from treehash, for a total entropy of over $85.9$ bits of entropy.
-%% Tabulation adds $2^{-64}$, for a total of over $63.99$ bits of entropy.
-
-%% After EHC, HalftimeHash essentially runs three treehashes.
-%% Two input strings collide if they collide on all three treehashes.
-%% Because the keys for each treehash were chosen indepenently, there is no dependence between a collision in one of the three parts and a collision in either of the other parts.
-
-%% The collision probability of treehash is proportional to the product of the log of the input length and the collision probability of the basic hash function, which for HalftimeHash is NH.
-
-%% If $w \neq x$, then $\Pr_s[H_i(s, w) = H_i(s, x)]$ is no more than $\varepsilon$.
-%% This can be applied to each block without rasing $\varepsilon$:
-%% If $[w, x] \neq [y, z]$, then either $w \neq y$, $x \neq z$, or both.
-%% W.l.o.g, assume $w \neq y$; now if $G_i(s, [w, x]) = G_i(s, [y, z])$, then $H_i(s, w) = H_i(s, y)$, so \[Pr_s[G_i(s, [w, x]) = G_i(s, [y, z])] \leq \Pr_s[H_i(s, w) = H_i(s, y)] \leq \varepsilon\] and thus $G_i$ is $\varepsilon$-almost universal.
-%% The extra appended characters do not alter this - the identity function is $0$-almost universal!
-
-%% These $G_i$ can be applied repeatedly, starting with $G_1$ until the string remaining has fewer than $m$ characters.
-%% At each level, $\varepsilon$ grows.
-%% It is rather direct, and Carter \& Wegman show, that for any $U$ that is $\varepsilon_1$-almost universal and $V$ that is $\varepsilon_2$-almost universal, their composition $U \circ V$ is $(\varepsilon_1 + \varepsilon_2)$-almost universal.
-
-%% The number of times $G_i$ needs to be applied is $\log_{m/j}(n/m) \pm O(1)$, so $\widehat{G} \triangleq  \bigcirc_i G_i$, which takes a seed from $\prod_i S_i$ and an input string of length $m$, is $\widehat{\varepsilon}$-almost universal, where $\widehat{\varepsilon} \triangleq (\log_{m/j}(n/m) \pm O(1)) \prod_i \varepsilon_i$.
-
-%% This only applies to strings of length exactly $m$, but taking the output of $\widehat{G}$ and appending the value $m$ is a family that is $\widehat{\varepsilon}$-almost universal on strings of arbitrary length.
-
-%% As shown in \cite{carter-wegman-79}, composing hash families like this incurs a linear extra cost: the composition of an $\varepsilon_1$-almost universal hash function and an $\varepsilon_2$-almost universal hash function is $(\varepsilon_1 + \varepsilon_2 - \varepsilon_1 \varepsilon_2)$-almost universal.
-%% The number of functions composed depends on the height of the stack, which depends on the length of the string.
-
-%% Each level in the stack/tree reduces the height of the string by a factor of \texttt{kFanout}.
-%% Since a level needs \texttt{kFanout * 3 Blocks} before populating the next level, the total number of levels is
-%% \[\lfloor \log_f n - \log_f (3fB) \rfloor = \lfloor \log_f (n/3B) - 1 \rfloor \]
-%% where $f$ is \texttt{kFanout} and $B$ is \texttt{sizeof(Block)}.
-%% For a string of 1TiB, $f = 8$, and $B = 64$, this is $10$.
-%% Since the tree hash is essentially performing three almost-universal hashings with 32 bits of entropy per level, the total end entropy is $\lg (2^{32} / 10)^3 > 86$ bits.
-
-
-%% The input seed must have enough entropy to hash all of the encoded values down from a three-tuple to a single value.
-%% HalftimeHash hashes these almost-$\Delta$-universally using NH (see below).
-%% This requires one 64-bit word for each input word, which is $9 \cdot 3 = 27$ based on $e$ and $i_w$.
-
-
-%% Since the sums differ in at least one lcoation, this probability is at least
-
-%% This is at least
-
-%% \texttt{EhcUpperLayer} takes 1536 bytes as input and produces 256 bytes as output.
-%% Physically these are each contiguous bytes in memory, but {\em logically}, the input should be thought of three {\em partitions}, each consisting \texttt{sizeof(Block) / sizeof(uint64\_t) = 8} interleaved {\em instances} of NH; each instance is broken up into \texttt{fanout} 64-bit {\em words}.
-%% To hash an instance, \texttt{fanout - 1} words are hashed with NH and then added to the last word in the instance.
-%% Thus each instance requires \texttt{fanout - 1} words of entropy, but they can all use the same entropy, since each can be thought of as a group of leaves in the treehash, with no overlapping groups.
-
-%% Each instance has 32 bits of entropy and is essentially a portion of all the treehash edges at a given level.
-%% As a whole, this family produces 32 bits of entropy.
-%% However, the partitions will be essential to the bounds discussed below, so we need to dive deeper here.
-
-%% We will see below that if the input to two different calls to \texttt{EhcUpperLayer} differ in one bit of input, they differ in all three partitions with high probability.
-%% As such, the output of \texttt{EhcUpperLayer} differs for different input with probabilty $1 - ({2^{-32}})^3$.
 
 \section{Tests}
 
 This section covers performance testing for HalftimeHash, especially compared to clhash and UMASH, the two fastest AU families on long strings.
 Each of those are based on NH over $\ints_2[x]$, rather than $\ints_{2^{64}}$.
 
-%% HalftimeHash can vary over three dimensions:
-
-%% \begin{itemize}
-%% \item Block size, the number of instances interleaved in each execution
-%% \item Output size, which varies from 16 bytes to 40 bytes in this implementation
-%% \item ISA, which varies from the C++ virtual machine (in other words, scalar operations on \texttt{uint32\_t}s) to AVX-512
-%% \end{itemize}
-
-%In addition to the performance testing here,
 HalftimeHash passes all correctness and randomness tests in the SMHasher test suite; for a performance comparison, see Figure \ref{smhasher-speed} and \cite{smhasher}.
 
 \begin{figure}
@@ -887,15 +542,6 @@ Figure \ref{frontier} displays the relationship between output entropy and throu
 Adding more output entropy increases the number of multiplications and additions that HalftimeHash (or clhash, or UMASH) has to perform.
 Nandi showed that this is true in the general case, as there is a matching upper and lower bound for the number of non-linear operations to be performed for a certain hash output width. \cite{ehc-nandi}
 
-%% The configuration matrix consists of four block sized, from 64 to 512 bits, 
-
-%% Another variant of HalftimeHash varies based on the block width.
-%% Variants labelled ``v4'' use 512-bit block, v3, 256 bit blocks, and so on.
-%% The code currently sixteen total variants, with four output widths and four block widths.
-
-%% TODO: Each of the variants of HalftimeHash for different SIMD widths and output size pass all SMhasher tests when finalized with tabulation hashing. \cite{smhasher}
-%% Each also passes the clhash tests.
-%% Additionally, the AVX-512 variants of HalftimeHash16 and HalftimeHash24 exceed all other hash functions in SMhasher in terms of speed.
 
 \begin{figure}
 \includegraphics[width=\textwidth]{speed-v-epsilon.eps}
@@ -912,7 +558,6 @@ Although these machines support different ISA vector extensions, the pattern is 
 The ``v3'' after the name indicates block size: v3 means a 256-bit block size, while v4 (the default) means 512-bit block size.
 V3 is used in the AMD tests, as AMD does not yet support AVX-512.
 
-%Cross-machine workloads or persistent hash values may require a consistent block size between machines with different maximum SIMD register sizes, but Figure \ref{block-size} shows the performance penalty is not unreasonable.
 
 \begin{figure*}
 \begin{tabular}{cccc}
@@ -929,15 +574,6 @@ V3 is used in the AMD tests, as AMD does not yet support AVX-512.
 }
 \end{figure*}
 
-%% TODO: compare to VHASH
-
-%% HalftimeHash24, when composed with SipHash or tabulation hashing as a final step, passes all SMHasher tests.
-%% This is faster in SMhasher's bulk speed tests than all other previously tested hash function, excluding \texttt{crc32\_pclmul\_le\_16}, a deterministic 32-bit hash function implemented in assembly in the Linux kernel.
-
-%% TODO: Notes on SMHasher and relatives
-
-%% TODO: crypto community tests, eBASH
-
 \section{Future work}
 
 Future potential work not already mentioned includes:
@@ -952,161 +588,17 @@ Future potential work not already mentioned includes:
 \item More detailed comparisons against hash algorithms written for speed and executed in the Linux kernel, including Poly1305 and \texttt{crc32\_pclmul\_le\_16} could also be a fruitful direction for future work, as could comparisons on POWER and ARM ISA's.
 \end{itemize}
 
-%TODO: multi-threading
-
-%TODO: reducing seed size
-
-%\lstinputlisting{narrow-code/halftime-hash-basic.c}
 
 \section*{Acknowledgments}
 Thanks to Daniel Lemire, Paul Khuong, and Guy Even for helpful discussions and feedback.
-%\balance
+
 
 \bibliographystyle{splncs04}
 \bibliography{library}
 
-%% \appendix
-%% \section{Additional charts}
-
-%% \includegraphics{speed-v-epsilon-amd.eps}
-
-%% \includegraphics[width=0.95\textwidth]{clang-local-hh4.eps}
-
-%% An additional block type is a repetition of multiple blocks of smaller size.
-%% This has utility, when, for instance, the same hash function must be used on different machines with different available SIMD instructions.
-
-
-%% The remainder describes the user-facing functions, all of which wrap the \texttt{Hash()} function above.
-
-%% %
 
 \end{document}
 \endinput
-%% The last equation is equivalent to $H(s,x) \equiv H(s,y) 2^{64 - p}$, with operations in $\ints^k$, rather than $\ints_{2^{64}}^k$.
-%% This is equivalent to $\exists 0 \leq r < 2^p, 2^p(H(s,x) - H(s,y)) = \delta' + 2^{64} r$.
-%% Since these operations are pointwise on three components, there are not just $2^p$ values, but $(2^p)^3$ values of $r$, so by the union bound we have
-%% \[
-%% \max_{\delta' \in \Phi^3}, \Pr_s[2^p(H(s,x) - H(s,y)) = \delta'] \leq (2^r\varepsilon)^3
-%% \]
-%% Since $r=2$ and $\varepsilon = 2^{-32}$, this is $2^{-90}$.
-
-
-%% and has an inverse $W^{-1}$, so this equation is equivalent to $H(s,x) - H(s,y) = W^{-1} \cdot \delta$.
-%% \begin{equation}
-%%   \begin{array}{rl}
-%%   \label{ehc-delta-final}
-%%   &\max_{\delta \in \Phi^3}, \Pr_s[H(s,x) - H(s,y) = W^{-1} \cdot \delta] \\
-%%   \leq&   \max_{\delta' \in \Phi^3}, \Pr_s[H(s,x) - H(s,y) = \delta']
-%% \end{array}
-%% \end{equation}
-
-%% By \ref{ehc-h-delta}, this is $\leq \varepsilon^3$.
-
-
-%% Note that this bound is not tight.
-%% In particular, when $\delta'$ is not dividible by $2^p$, $\max_{\delta' \in \Phi^3}, \Pr_s[2^p(H(s,x) - H(s,y)) = \delta'] = 0$
-
-
-%% Let $H$ be the hash function in step 1 of EHC and $G$ be the full EHC hash family, including all three steps.
-%% The output size of EHC is three 64-bit words with the property that if $x \neq y$ are input strings and $\delta$ is a three-tuple in $\ints_{2^{64}}^3$, then
-%% \[
-%% \forall_{i < 3}, \Pr_s[G(s,x)_i = G(s,y)_i + \delta_i] = 2^{-32}
-%% \]
-%% and
-%% \[
-%% \Pr_s\left[\forall_{i < 3}, G(s,x)_i = G(s,y)_i + \delta_i\right] = 2^{-96}
-%% \]
-%% In other words, $G$ is $2^{-32}$-almost-$\Delta$ universal and the $3$ output values of $G$ are independent.
-
-%% First, the proof of independence:
-
-%% Nandi's proof of this relies on the invertability of non-singular matrices to preserve entropy:
-%% Let $w, z$ be two unequal input sequences from $\Sigma^m$.
-%% The encoding produces $x, y$ of length $m + 2$ with minimum distance three.
-%% That is, $\exists i < j < k \leq m + 2, x[i] \neq y[i] \wedge x[j] \neq y[j] \wedge x[k] \neq y[k]$.
-
-%% The hash functions are picked independently from an $\varepsilon$-almost-$\Delta$ universal family $H \in S \to \Sigma \to \Phi$, so
-%% \begin{equation}
-%%   \label{ehc-h-delta}
-%%   \forall \delta \in \Phi^3, \Pr_s[H(s,x) = H(s,y) + \delta] \leq \varepsilon^3
-%% \end{equation}
-%% Individually, each component the three components in the equation is true with probability $\varepsilon$, but we need the fact that if $r \neq t$ then for all $z$, $H(s_r, z_r)$ and $H(s_t, z_t)$ are independent to get the $\varepsilon^3$ bound.
-
-
-%% That's how much entropy is provided.
-%% The entropy required is three 64-bit keys per column, since we collapse the three-part input into one part before applying the combination transform.
-%% That's a total of \texttt{3 * 9 * sizeof(uint64\_t) = 216} bytes.
-
-%% \[
-%% \forall_{i < 3}, \Pr_s[G(s,x)_i = G(s,y)_i + \delta_i] = 2^{-32}
-%% \]
-
-%% Since $x$ and $y$ differ, their encodings differ in at least three places.
-%% The matrix used in the Combine step has no more than two zeros in a row.\footnote{In fact, any matrix in which all sets of three columns are non-singular have this property.}
-%% This means there is at least one non-zero column in row $i$ where $x$ and $y$ differ before the hashing step.
-%% After the NH hashing step, each location still differs with probability $1-2^{-32}$.
-
-
-%% % TODO: does this work better if at most one zero in each column?
-
-%% \[
-%% \Pr_s \left[\sum_j V_{i,j}  H(s_j, e(x)) = \sum_j V_{i,j}  H(s_j, e(y)) + \delta\right]
-%% \]
-
-%% Wlog, let $m$ be a non-zero location in $V_i$ where $e(x)$ and $e(y)$ differ.
-%% The above probability now can be converted to
-
-%% \[
-%% \Pr_s \left[V_{i,m} H(s_m, e(x)) =  V_{i,m} H(s_m, e(y)) + \delta'\right]
-%% \]
-
-%% Where $\delta' = \sum_{j\neq m} V_{i,j}  (H(s_j, e(y)) - H(s_j, e(x))) + \delta$.
-%% Let $V_{i,m} = p2^q$, where $p$ is odd.
-%% The probability above is now equivalent to
-
-%% \[
-%% \Pr_s \left[2^q H(s_m, e(x)) =  2^q H(s_m, e(y)) + \delta''\right]
-%% \]
-
-%% where $\delta'' = q^{-1}\delta'$.
-%% This is possible because $q$ has an inverse in $\ints_{2^{64}}$.
-%% This is identical to the analysis above regarding even numbers and inverses, and the probability is no more than $2^{q-32}$.
-%% Since $q$ is at most 2 in the V we use
-
-%% By the almost-$\Delta$ universality of $H$, $\Pr_s \left[V_{i,m} H(s_m, e(x)) =  V_{i,m} H(s_m, e(y)) + \delta'\right]$
-
-% passes smhasher: poly_2_mersenne poly_3_mersenne poly_4_mersenne
-% tabulation floppsyhash GoodOAAT prvhash42_128 prvhash42_64
-% prvhash42s_64 prvhash42s_128 HighwayHash64 mirhashstrict pengyhash
-% City64low City128 CityCrc128 FarmHash64 FarmHash64 FarmHash128
-% xxHash64 xxh3low xxh128 xxh128low wyhash umash64
-
-%% City128
-%% City64low
-%% CityCrc128
-%% FarmHash128
-%% FarmHash64
-%% FarmHash64
-%% floppsyhash
-%% GoodOAAT
-%% HighwayHash64
-%% mirhashstrict
-%% pengyhash
-%% poly_2_mersenne
-%% poly_3_mersenne
-%% poly_4_mersenne
-%% prvhash42_128
-%% prvhash42_64
-%% prvhash42s_128
-%% prvhash42s_64
-%% tabulation
-%% umash64
-%% wyhash
-%% xxh128
-%% xxh128low
-%% xxh3low
-%% xxHash64
-
 
 %%  LocalWords:  HalftimeHash codomain ISA's UMASH falkhash MeowHash
 %%  LocalWords:  MetroHash FarmHash clhash wyhash farmhash UHASH EHC
