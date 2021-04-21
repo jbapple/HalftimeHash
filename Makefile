@@ -4,7 +4,8 @@ all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe \
 	line-cl-hh24.eps amd-16.eps clang-local-hh4.eps test-read-each-byte.exe \
 	test-read-each-byte.debug-exe no-collisions.exe no-collisions.debug-exe \
 	smhasher-speed.eps test-bytes-needed.exe example.exe yes-badger.eps \
-	no-badger.eps speed-v-epsilon-amd.eps arxiv.zip
+	no-badger.eps speed-v-epsilon-amd.eps arxiv.zip smhasher-speed.pdf \
+	speed-v-epsilon-amd.pdf line-cl-hh24.pdf amd-cl-hh24.pdf
 
 RELEASE_FLAGS = -ggdb3 -O3 -march=native -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -DNDEBUG \
@@ -29,6 +30,9 @@ export
 %.eps: %.dia Makefile
 	dia -e $@ $<
 
+%.pdf: %.eps Makefile
+	epstopdf $<
+
 umash/umash.o: umash/umash.c Makefile
 	$(CC) $(RELEASE_FLAGS) -o $@ $< -c
 
@@ -46,7 +50,9 @@ amd-16.eps: plateau-008.txt points-example.txt smhasher-speed.txt c5a.large-clan
 
 smhasher-speed.eps line-cl-hh24.eps speed-v-epsilon.eps amd-cl-hh24.eps clang-local-hh4.eps speed-v-epsilon-amd.eps: plateau-008.txt points-example.txt plot.gnu amd-16.eps Makefile
 
-arxiv.zip: smhasher-speed.eps speed-v-epsilon.eps line-cl-hh24.eps amd-cl-hh24.eps halftime-hash.tex halftime-hash.bbl Makefile
+smhasher-speed.pdf line-cl-hh24.pdf speed-v-epsilon.pdf amd-cl-hh24.pdf clang-local-hh4.pdf speed-v-epsilon-amd.pdf: plateau-008.txt points-example.txt plot.gnu amd-16.eps Makefile
+
+arxiv.zip: smhasher-speed.pdf speed-v-epsilon.pdf line-cl-hh24.pdf amd-cl-hh24.pdf halftime-hash.tex halftime-hash.bbl Makefile
 	rm -f arxiv.zip
 	zip arxiv $^
 

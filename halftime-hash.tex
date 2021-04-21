@@ -1,11 +1,13 @@
 \documentclass{llncs}
 
+\pdfoutput=1
+
 \usepackage{amsfonts}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{color}
 \usepackage{graphicx}
-\PassOptionsToPackage{hyphens}{url}\usepackage[pdfusetitle,hidelinks]{hyperref}
+\PassOptionsToPackage{hyphens}{url}\usepackage[pdftitle={HalftimeHash: Modern Hashing without 64-bit Multipliers or Finite Fields},hidelinks]{hyperref}
 \usepackage{microtype}
 
 \DeclareMathOperator{\adj}{adj}
@@ -522,7 +524,7 @@ Similarly, clhash and UMASH, which are based on 64-bit carryless NH, have their 
 HalftimeHash passes all correctness and randomness tests in the SMHasher test suite; for a performance comparison, see Figure \ref{smhasher-speed} and \cite{smhasher}.
 
 \begin{figure}
-  \includegraphics[width=\textwidth]{smhasher-speed.eps}
+  \includegraphics[width=\textwidth]{smhasher-speed}
 \caption{
   \label{smhasher-speed}
     The two fastest variants of HalftimeHash are faster than all hash families in the SMHasher suite on 256KiB strings on an i7-7800x, even families that come with no AU guarantees. \protect\cite{smhasher}
@@ -537,7 +539,7 @@ The avoidance of doubling the number of multiplications for twice the output siz
 (The other is that carryless multiplication is not supported as a SIMD instruction.)
 
 \begin{figure}
-\includegraphics[width=\textwidth]{speed-v-epsilon.eps}
+\includegraphics[width=\textwidth]{speed-v-epsilon}
 \caption{
   \label{frontier}
   Trade-offs for almost-universal string hashing functions on strings of size 250KB on an i7-7800x.
@@ -550,9 +552,9 @@ Figure \ref{vs-cl} adds comparisons between clhash, UMASH, and HalftimeHash acro
 Although these two machines support different ISA vector extensions, the pattern is similar: for large enough input, HalftimeHash's throughput exceeds that of the carryless multiplication families.
 \begin{figure*}
 \begin{tabular}{cc}
-\includegraphics[width=6.0cm]{line-cl-hh24.eps}
+\includegraphics[width=6.0cm]{line-cl-hh24}
 &
-\includegraphics[width=6.0cm]{amd-cl-hh24.eps}
+\includegraphics[width=6.0cm]{amd-cl-hh24}
 \end{tabular}
 \caption{
   \label{vs-cl}
