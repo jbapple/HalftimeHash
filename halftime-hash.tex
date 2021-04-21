@@ -452,7 +452,7 @@ The parameters used in this analysis are:
 \item[$w$] is the number of blocks in each item used in the Encode step of EHC.
 \end{description}
 
-In HalftimeHash24, \[(w, d, e, k, b, f, p) = (3, 7, 9, 3, 8, 8, 2^2)\]
+In HalftimeHash24, \[(b, d, e, f, k, p, w) = (8, 7, 9, 8, 3, 2^2, 3)\]
 
 Each EHC execution reads in $d w$ blocks, produces $e$ blocks, uses $e w$ words of input entropy, and performs $e w$ multiplications.
 

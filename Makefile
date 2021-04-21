@@ -57,6 +57,7 @@ arxiv.zip: smhasher-speed.pdf speed-v-epsilon.pdf line-cl-hh24.pdf amd-cl-hh24.p
 	zip arxiv $^
 
 clean: Makefile
+	rm -f smhasher-speed.pdf line-cl-hh24.pdf speed-v-epsilon.pdf amd-cl-hh24.pdf clang-local-hh4.pdf speed-v-epsilon-amd.pdf
 	rm -f Diagram2.eps
 	rm -f random-combiners.exe
 	rm -f speed-v-epsilon.eps
