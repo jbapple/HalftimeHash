@@ -53,13 +53,13 @@ A hash family $H$ is called is $\varepsilon$-almost universal (``$\varepsilon$-A
 \[
 \forall x,y \in D, x \neq y \implies \mathrm{Pr}_{s \in S}[H(s, x) = H(s, y)] \leq \varepsilon \in o(1)
 \]
-The intuition behind this definition is that collisions can be made unlikely by picking randomly from a hash {\em family} independent of the input strings, rather than anchoring on a specific hash {\em function} such as MD5 that does not take a seed as an input. AU hash families are useful in hash tables, where collisions slow down operations and, in extreme cases, can turn linear algorithms into quadratic ones. \cite{tabulation,rust-quadratic,impala-quadratic,algorithm-attack}
+The intuition behind this definition is that collisions can be made unlikely by picking randomly from a hash {\em family} independent of the input strings, rather than anchoring on a specific hash {\em function} such as MD5 that does not take a seed as an input. AU hash families are useful in hash tables, where collisions slow down operations and, in extreme cases, can turn linear algorithms into quadratic ones. \cite{impala-quadratic,algorithm-attack,rust-quadratic,tabulation}
 
 HalftimeHash is a new ``universe collapsing'' hash family, designed to hash long strings into short ones. \cite{linear-hash-functions,hashing-without-primes-revisited,cuckoo-journal}
 This differs from short-input families like SipHash or tabulation hashing, which are suitable for hashing short strings to a codomain of 64 bits. \cite{siphash,tabulation}
 Universe collapsing families are especially useful for composition with short-input families: when $n$ long strings are to be handled by a hash-based algorithm, a universe-collapsing family that reduces them to hash values of length $c \lg n$ bits for some suitable $c > 2$ produces zero collisions with probability $1-O(n^{2-c})$.
-A short-input hash family can then treat the hashed values as if they were the original input values. \cite{universe-collapse-linear-probing,siphash,tabulation,simple-hash-functions-work}
-This technique applies not only to hash tables, but also to message-authentication codes, load balancing in distributed systems, privacy amplification, randomized geometric algorithms, Bloom filters, and randomness extractors. \cite{poly1305,chord,privacy-amplification,random-closest-pair,simple-hash-functions-work,fuzzy-extractors}
+A short-input hash family can then treat the hashed values as if they were the original input values. \cite{siphash,simple-hash-functions-work,universe-collapse-linear-probing,tabulation}
+This technique applies not only to hash tables, but also to message-authentication codes, load balancing in distributed systems, privacy amplification, randomized geometric algorithms, Bloom filters, and randomness extractors. \cite{poly1305,simple-hash-functions-work,random-closest-pair,fuzzy-extractors,privacy-amplification,chord}
 
 On strings longer than 1KB, HalftimeHash is typically 55\% faster than clhash, the AU hash family that comes closest in performance.
 
@@ -334,7 +334,7 @@ The algorithm performs the following steps:
 
 \subsection{EHC}
 
-In addition to the trivial distance-2 erasure code of XOR'ing the words together and appending that as an additional word, HalftimeHash uses non-linear erasure codes discovered by Gab\-ri\-el\-yan with minimum distance 3, 4, or 5. \cite{9-7-erasure-code,10-7-erasure-code,9-5-erasure-code}
+In addition to the trivial distance-2 erasure code of XOR'ing the words together and appending that as an additional word, HalftimeHash uses non-linear erasure codes discovered by Gab\-ri\-el\-yan with minimum distance 3, 4, or 5. \cite{10-7-erasure-code,9-5-erasure-code,9-7-erasure-code}
 
 For the linear transformations, HalftimeHash uses matrices $T$ selected so that the largest power of 2 that divides any determinant is $2^2$ or $2^3$.
 For instance, for the HalftimeHash24 variant, $T$ has a $p$ of $2^2$:
@@ -516,7 +516,7 @@ HalftimeHash24 requires 8.4KB input entropy for strings of length up to one mega
 The number of multiplications is dominated by the EHC step, since the total is $(e w + k) b \lfloor n / b d w \rfloor + O(\log n)$ and $e w$ is significantly larger than $k$.
 For a string of length 1MB, 84\% of the multiplications happen in the EHC step. %, and the number of multiplications is about one per ten bytes of input.
 Intel's VTune tool show the same thing: 86\% of the clock cycles are spent in the EHC step.
-Similarly, clhash and UMASH, which are based on 64-bit carryless NH, have their execution times dominated by the multiplications in their base step.~\cite{clhash,umash}
+Similarly, clhash and UMASH, which are based on 64-bit carryless NH, have their execution times dominated by the multiplications in their base step.~\cite{umash,clhash}
 
 \subsection{Benchmarks}
 \label{benchmarks}
