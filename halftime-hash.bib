@@ -58,15 +58,25 @@ isbn="978-3-662-46706-0"
   year={1999},
   organization={Springer},
   url = "https://link.springer.com/chapter/10.1007/3-540-48405-1_14",
-  note = {\url{https://web.cs.ucdavis.edu/~rogaway/papers/umac-full.pdf}}
+  _note = {\url{https://web.cs.ucdavis.edu/~rogaway/papers/umac-full.pdf}}
 }
 
-@misc{badger,
-    author = {Martin Boesgaard and Ove Scavenius and Thomas Pedersen and Thomas Christensen and Erik Zenner},
-    title = {Badger - A Fast and Provably Secure {MAC}},
-    howpublished = {Cryptology ePrint Archive, Report 2004/319},
-    year = {2004},
-    note = {\url{https://eprint.iacr.org/2004/319}},
+@InProceedings{badger,
+author="Boesgaard, Martin
+and Christensen, Thomas
+and Zenner, Erik",
+editor="Ioannidis, John
+and Keromytis, Angelos
+and Yung, Moti",
+title="Badger -- A Fast and Provably Secure MAC",
+booktitle="Applied Cryptography and Network Security",
+year="2005",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="176--191",
+abstract="We present Badger, a new fast and provably secure MAC based on universal hashing. In the construction, a modified tree hash that is more efficient than standard tree hashing is used and its security is proven. Furthermore, in order to derive the core hash function of the tree, we use a novel technique for reducing $\Delta$-universal function families to universal families. The resulting MAC is very efficient on standard platforms both for short and long messages. As an example, for a 64-bit tag, it achieves performances up to 2.2 and 1.3 clock cycles per byte on a Pentium III and Pentium 4 processor, respectively. The forgery probability is at most 2−{\thinspace}−{\thinspace}52.2.",
+isbn="978-3-540-31542-1",
+    _note = {\url{https://eprint.iacr.org/2004/319}},
 }
 
 @article{linear-hash-functions,
