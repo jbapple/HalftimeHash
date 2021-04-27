@@ -57,7 +57,7 @@ arxiv.zip: smhasher-speed.pdf speed-v-epsilon.pdf line-cl-hh24.pdf amd-cl-hh24.p
 	zip arxiv $^
 	zip -d arxiv.zip Makefile
 
-easychair.zip: smhasher-speed.pdf speed-v-epsilon.pdf line-cl-hh24.pdf amd-cl-hh24.pdf halftime-hash.tex halftime-hash.bib Makefile
+easychair.zip: smhasher-speed.eps speed-v-epsilon.eps line-cl-hh24.eps amd-cl-hh24.eps halftime-hash.tex halftime-hash.bib Makefile
 	rm -f easychair.zip
 	zip easychair $^
 	zip -d easychair.zip Makefile
