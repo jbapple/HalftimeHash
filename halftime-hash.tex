@@ -81,7 +81,7 @@ The other reason HalftimeHash avoids 64-bit multiplications is portability to SI
 %% Aarch64 has similar instructions in the NEON set.
 % The POWER ISA also contains this, but only on 128 bits at once?
 
-\subsection{Prior almost-universal families}
+\subsection{Prior Almost-Universal Families}
 
 There are a number of fast hash algorithms that run at rates exceeding 8 bytes per cycle on modern x86-64 processors, including Fast Positive Hash, falk\-hash, xxh, Meow\-Hash, and UMASH, and cl\-hash. \cite{smhasher}
 Of these, only cl\-hash and U\-MASH include claims of being AU; each of these uses finite fields and the x86-64 instruction for carryless (polynomial) multiplication.
@@ -137,7 +137,7 @@ Variants will be specified by their number of output bytes: HalftimeHash16, Half
 
 Except where otherwise mentioned, all benchmarks were run on an Intel i7-7800x (a Skylake chip that supports AVX512), running Ubuntu 18.04, with clang++ 11.0.1.
 
-\section{Prior work}
+\section{Prior Work}
 \label{prior-work}
 
 %% Roughly, each execution HalftimeHash can be thought of as a tree with a hashing primative ``NH'' at the nodes and instances of ``EHC'' at the leaves.
@@ -157,7 +157,7 @@ When the size of the input is low enough, rather than recurse, a construction ca
 %% the internal nodes use NH, a hashing primitive from UHASH;
 %% the EHC at the leaves is described in this section (and generalized for use in HalftimeHash in Section~\ref{gehc}).
 
-\subsection{Tree hash}
+\subsection{Tree Hash}
 
 HalftimeHash's structure is based on a tree-like hash as described by Carter and Wegman. \cite[Section 3]{carter-wegman-79}
 To hash a string, we use $\lceil \lg n \rceil$ randomly-selected keys $k_i$ and a hash family $H$ that hashes two words down to one.
@@ -387,7 +387,7 @@ $\left(
 The input group lengths for the EHC input are 6, 7, 7, and 5, as can be seen from the dimensions of the matrices: $\text{columns} + 1 - \text{rows}$.
 Note that each of these matrices contains coefficients that can be multiplied by with no more than two shifts and one addition.
 
-\subsection{Tree hash}
+\subsection{Tree Hash}
 
 For the tree hashing at internal nodes (above the leaf nodes, which use EHC), $k \in \{2, 3, 4, 5\}$ tree hashes are executed with independently-chosen input entropy, producing output entropy of $-k \lg \varepsilon$.
 From the result from Carter and Wegman on the entropy of tree hash of a tree of height $m$, the resulting hash function is $m\varepsilon^k$-AU.
@@ -497,7 +497,7 @@ Let $r$ be the sequence of random words used to hash it.
 Instead of using $r[i b d w, (i+1)b d w)$ as the keys to hash component $i$ with, HalftimeHash uses $r[i, b d w + i)$.
 This construction for multi-part hash output is A$\Delta$U. \cite{ehc-nandi,woelfel-toeplitz}
 
-\subsection{Cumulative analysis}
+\subsection{Cumulative Analysis}
 
 The combined collision probability is
 $2^{-32k}\left(2^{kp} + h^k + 1\right)$.
@@ -566,7 +566,7 @@ Although these two machines support different ISA vector extensions, the pattern
 }
 \end{figure*}
 
-\section{Future work}
+\section{Future Work}
 
 Areas of future research include:
 
