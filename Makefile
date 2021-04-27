@@ -5,7 +5,7 @@ all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe \
 	test-read-each-byte.debug-exe no-collisions.exe no-collisions.debug-exe \
 	smhasher-speed.eps test-bytes-needed.exe example.exe yes-badger.eps \
 	no-badger.eps speed-v-epsilon-amd.eps arxiv.zip smhasher-speed.pdf \
-	speed-v-epsilon-amd.pdf line-cl-hh24.pdf amd-cl-hh24.pdf
+	speed-v-epsilon-amd.pdf line-cl-hh24.pdf amd-cl-hh24.pdf easychair.zip
 
 RELEASE_FLAGS = -ggdb3 -O3 -march=native -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -DNDEBUG \
@@ -55,6 +55,13 @@ smhasher-speed.pdf line-cl-hh24.pdf speed-v-epsilon.pdf amd-cl-hh24.pdf clang-lo
 arxiv.zip: smhasher-speed.pdf speed-v-epsilon.pdf line-cl-hh24.pdf amd-cl-hh24.pdf halftime-hash.tex halftime-hash.bbl Makefile
 	rm -f arxiv.zip
 	zip arxiv $^
+	zip -d arxiv.zip Makefile
+
+easychair.zip: smhasher-speed.pdf speed-v-epsilon.pdf line-cl-hh24.pdf amd-cl-hh24.pdf halftime-hash.tex halftime-hash.bib Makefile
+	rm -f easychair.zip
+	zip easychair $^
+	zip -d easychair.zip Makefile
+
 
 clean: Makefile
 	rm -f smhasher-speed.pdf line-cl-hh24.pdf speed-v-epsilon.pdf amd-cl-hh24.pdf clang-local-hh4.pdf speed-v-epsilon-amd.pdf
