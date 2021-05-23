@@ -27,7 +27,6 @@
 %% {\begin{quote}\itshape}
 %% {\end{quote}}
 
-
 \begin{document}
 
 \title{HalftimeHash: Modern Hashing without 64-bit Multipliers or Finite Fields}
@@ -108,13 +107,13 @@ Input string length $n$ is measured in 32-bit {\em words}.
 ``64-bit multiplication'' similarly refers to the operation producing a 128-bit product.
 All machine integers are unsigned.
 
-Sequences are denoted by angled brackets: ``$\langle$'', ``$\rangle$'', and $\triangleleft$ prepends a character onto a string.
+Sequences are denoted by angled brackets: ``$\langle$'', ``$\rangle$'', and $\triangleleft$ prepends a value onto a sequence.
 Subscripts indicate a numbered component of a sequence, starting at 0.
 Contiguous half-open subsequences are denoted ''$x[y,z)$'', meaning $\langle x_y, x_{y+1}, \dots, x_{z-1} \rangle$.
 
 $\bot$ is a new symbol not otherwise in the alphabet of words
 
-$\varepsilon$ is called the {\em collision probability} of $H$; it is inversely related to $H$'s {\em output entropy}, $-\lg \varepsilon$.
+In the definition of $\varepsilon$-almost universal, $\varepsilon$ is called the {\em collision probability} of $H$; it is inversely related to $H$'s {\em output entropy}, $-\lg \varepsilon$.
 The seed is sometimes referred as {\em input entropy}, which is distinguished from the output entropy both because it is an explicit part of the input and because it is measured in words or bytes, not bits.
 
 Each step of HalftimeHash applies various transforms to groups of input values.
@@ -133,10 +132,10 @@ Adding collision resistance between strings of {\em different} lengths to such a
 
 %The main portion of the text describes a particular instantiation of HalftimeHash that produces 24 bytes of output.
 %This will be generalized in Section~\ref{performance}.
-Variants will be specified by their number of output bytes: HalftimeHash16, HalftimeHash24, HalftimeHash32, or HalftimeHash40.
+HalftimeHash variants will be specified by their number of output bytes: HalftimeHash16, HalftimeHash24, HalftimeHash32, or HalftimeHash40.
 %HalftimeHash24 has $\varepsilon < 2^{-83}$, as discussed in Section~\ref{performance}.
 
-Except where otherwise mentioned, all benchmarks were run on an Intel i7-7800x (a Skylake chip that supports AVX512), running Ubuntu 18.04, with clang++ 11.0.1.
+Except where otherwise mentioned, all benchmarks were run on an Intel i7-7800x (a Skylake X chip that supports AVX512), running Ubuntu 18.04, with Clang++ 11.0.1.
 
 \section{Prior Work}
 \label{prior-work}
@@ -335,6 +334,7 @@ The algorithm performs the following steps:
 \subsection{EHC}
 
 In addition to the trivial distance-2 erasure code of XOR'ing the words together and appending that as an additional word, HalftimeHash uses non-linear erasure codes discovered by Gab\-ri\-el\-yan with minimum distance 3, 4, or 5. \cite{10-7-erasure-code,9-5-erasure-code,9-7-erasure-code}
+These codes can be computed without any multiplications.
 
 For the linear transformations, HalftimeHash uses matrices $T$ selected so that the largest power of 2 that divides any determinant is $2^2$ or $2^3$.
 For instance, for the HalftimeHash24 variant, $T$ has a $p$ of $2^2$:
@@ -414,8 +414,8 @@ For HalftimeHash, define $\widehat{T}$ as a family taking as input sequences of 
 \widehat{T}_0(k, \langle x \rangle) \defeq \langle x \rangle \\
 \widehat{T}_{i+1}(k, s[0,n)) \defeq \left\{
   \begin{array}{rcll}
-   \bot &\triangleleft& \widehat{T}_i(k[1,\lceil\lg n\rceil), s[0,n)) & \text{if } 2^i > n \\
-    T(k, s[0, 2^i))) &\triangleleft& \widehat{T}_{i}(k[1,\lceil\lg n\rceil),s[2^i, n)) & \text{if } 2^i \le n
+   \bot &\triangleleft& \widehat{T}_i(k, s[0,n)) & \text{if } 2^i > n \\
+    T(k, s[0, 2^i))) &\triangleleft& \widehat{T}_{i}(k,s[2^i, n)) & \text{if } 2^i \le n
   \end{array}
   \right.
 \end{array}
@@ -474,7 +474,7 @@ The tree hash is $2^{ k\lg h - 32k}$-AU.
 The amount of input entropy needed is proportional to the height of the tree, with $f - 1$ words needed for every level.
 HalftimeHash uses different input entropy for the $k$ different trees, so the total number of 64-bit words of input entropy used in the tree hash step is $(f - 1) h k$.
 
-The number of multiplications performed is identical to the number of input words, $k b \lfloor n / b d w \rfloor$.
+The number of multiplications performed is identical to the number of 64-bit words input, $k b \lfloor n / b d w \rfloor$.
 
 %% \begin{tabular}{|r|c|c|}
 %%   \hline & {\bf EHC} & {\bf Tree hash}\\
@@ -516,7 +516,7 @@ HalftimeHash24 requires 8.4KB input entropy for strings of length up to one mega
 The number of multiplications is dominated by the EHC step, since the total is $(e w + k) b \lfloor n / b d w \rfloor + O(\log n)$ and $e w$ is significantly larger than $k$.
 For a string of length 1MB, 84\% of the multiplications happen in the EHC step. %, and the number of multiplications is about one per ten bytes of input.
 Intel's VTune tool show the same thing: 86\% of the clock cycles are spent in the EHC step.
-Similarly, clhash and UMASH, which are based on 64-bit carryless NH, have their execution times dominated by the multiplications in their base step.~\cite{umash,clhash}
+\footnote{Similarly, clhash and UMASH, which are based on 64-bit carryless NH, have their execution times dominated by the multiplications in their base step.~\cite{umash,clhash}}
 
 \subsection{Benchmarks}
 \label{benchmarks}
@@ -572,8 +572,8 @@ Although these two machines support different ISA vector extensions, the pattern
 Areas of future research include:
 
 \begin{itemize}
-\item Combining HalftimeHash, which is designed for long input, with a fast family for short input
-\item Tuning for JavaScript, which has no native 32-bit integer support
+%\item Combining HalftimeHash, which is designed for long input, with a fast family for short input
+\item Tuning for JavaScript, which has no native 32-bit multiplication support, as it natively supports only double-precision floating point numbers
 \item Comparisons against hash algorithms in the Linux kernel, including Poly1305 and \texttt{crc32\_pclmul\_le\_16}
 \item Benchmarks on POWER and ARM ISA's
 \item EHC benchmarks using 64-bit multiplication -- carryless or integral
