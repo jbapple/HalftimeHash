@@ -5,7 +5,8 @@ all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe \
 	test-read-each-byte.debug-exe no-collisions.exe no-collisions.debug-exe \
 	smhasher-speed.eps test-bytes-needed.exe example.exe yes-badger.eps \
 	no-badger.eps speed-v-epsilon-amd.eps arxiv.zip smhasher-speed.pdf \
-	speed-v-epsilon-amd.pdf line-cl-hh24.pdf amd-cl-hh24.pdf easychair.zip
+	speed-v-epsilon-amd.pdf line-cl-hh24.pdf amd-cl-hh24.pdf easychair.zip \
+	tree.eps tree-1.eps tree-2.eps tree-3.eps
 
 RELEASE_FLAGS = -ggdb3 -O3 -march=native -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -DNDEBUG \

@@ -22,7 +22,6 @@
 \newcommand{\ints}{\mathbb{Z}}
 \newcommand{\cplx}{\mathbb{C}}
 \newcommand{\defeq}{\;\genfrac{}{}{0pt}{2}{\text{def}}{=}\;}
-
 %% \newenvironment{blockquote}
 %% {\begin{quote}\itshape}
 %% {\end{quote}}
@@ -510,8 +509,7 @@ e w
 + (f-1) h k
 + b f h k
 + b d w + k - 1
-$
-HalftimeHash24 requires 8.4KB input entropy for strings of length up to one megabyte and 34KB entropy for strings of length up to one exabyte.
+$. HalftimeHash24 requires 8.4KB input entropy for strings of length up to one megabyte and 34KB entropy for strings of length up to one exabyte.
 
 The number of multiplications is dominated by the EHC step, since the total is $(e w + k) b \lfloor n / b d w \rfloor + O(\log n)$ and $e w$ is significantly larger than $k$.
 For a string of length 1MB, 84\% of the multiplications happen in the EHC step. %, and the number of multiplications is about one per ten bytes of input.

@@ -18,7 +18,7 @@ set style fill
 plot 'smhasher-speed.txt' using 4:xtic(1), '' using 3, '' using 2
 unset style
 
-set terminal postscript eps enhanced color size 12cm,6.4cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr17.pfb" "LMRoman17,17"
+set terminal postscript eps enhanced color size 9.6cm,6.4cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr17.pfb" "LMRoman17,17"
 set output 'speed-v-epsilon.eps'
 set ylabel 'bytes per nanosecond'
 set xlabel 'output entropy'
@@ -26,7 +26,7 @@ set title "Output entropy vs. B/ns (upper right is better)"
 unset key
 set logscale x 2
 unset logscale y
-set grid
+unset grid
 set xrange[2**20:2**160]
 set yrange[10:70]
 unset offsets
@@ -122,6 +122,24 @@ plot './adu-full-001.txt' using 1:4 pt 6, '' using 1:11 with lines lw 10, '' usi
 
 set terminal postscript eps enhanced color size 6.4cm,6.4cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr17.pfb" "LMRoman17,17"
 #set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
+set title 'i7-7800x speed (higher is better)'
+unset offsets
+set xlabel 'input length in bytes'
+set ylabel 'bytes per nanosecond'
+set key top left
+set key autotitle columnheader
+unset logscale y
+set logscale x
+unset format y
+set format x '10^{%L}'
+set grid
+set output 'line-cl-hh24-floor.eps'
+set yrange[*:90]
+set xrange[1000:*]
+plot './adu-full-001.txt' using 1:4 pt 6, '' using 1:11 with lines lw 10, '' using 1:13 with lines
+
+set terminal postscript eps enhanced color size 6.4cm,6.4cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr17.pfb" "LMRoman17,17"
+#set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
 set title '7R32 speed (higher is better)'
 unset offsets
 set xlabel 'input length in bytes'
@@ -136,6 +154,25 @@ set grid
 set output 'amd-cl-hh24.eps'
 set yrange[*:90]
 set xrange[*:*]
+plot './c5a.large-clang-11-22bd15d.txt' using 1:8 pt 6, '' using 1:11 with lines lw 10, '' using 1:13 with lines
+#plot './c5a.large-clang-11-8c4af1f.txt' using 1:7 pt 6, './c5a.large-gcc-10-8c4af1f.txt' using 1:10 with lines lw 10, './c5a.large-clang-11-8c4af1f.txt' using 1:12 with lines
+
+set terminal postscript eps enhanced color size 6.4cm,6.4cm fontfile "/usr/share/texmf/fonts/type1/public/lm/lmr17.pfb" "LMRoman17,17"
+#set terminal postscript eps enhanced color size 5,5 fontfile "/usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineOB.pfb" "LinLibertineOB,29"
+set title '7R32 speed (higher is better)'
+unset offsets
+set xlabel 'input length in bytes'
+unset ylabel
+set key top left
+set key autotitle columnheader
+unset logscale y
+set logscale x
+unset format y
+set format x '10^{%L}'
+set grid
+set output 'amd-cl-hh24-floor.eps'
+set yrange[*:90]
+set xrange[1000:*]
 plot './c5a.large-clang-11-22bd15d.txt' using 1:8 pt 6, '' using 1:11 with lines lw 10, '' using 1:13 with lines
 #plot './c5a.large-clang-11-8c4af1f.txt' using 1:7 pt 6, './c5a.large-gcc-10-8c4af1f.txt' using 1:10 with lines lw 10, './c5a.large-clang-11-8c4af1f.txt' using 1:12 with lines
 

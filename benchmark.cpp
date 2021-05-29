@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
            << "Halftime" << (j * 8) << "v" << i;
     }
   }
-  // cout << "\t clhash \t clhash128 \t umash \t umash128";
+  cout << "\t clhash \t umash";
   cout << endl;
 
   uint64_t loop_count = 4;
@@ -174,11 +174,11 @@ int main(int argc, char** argv) {
       auto reps = 50.0 * 1000 * 1000 / (i * sqrt(i) + 1);
       reps = max(reps, 8.0);
       reps = min(1000.0 * 1000, reps);
-      Duration hh_time[8] = {
-        TimeMulti<WrapHash<V4<2>>>(reps, entropy, data.data(), i),
-        //TimeMulti<WrapHash<V4<3>>>(reps, entropy, data.data(), i),
-        //TimeMulti<WrapHash<V4<4>>>(reps, entropy, data.data(), i),
-        //TimeMulti<WrapHash<V4<5>>>(reps, entropy, data.data(), i),
+      Duration hh_time[4] = {//TimeMulti<clhashWrap128>(reps, entropy, data.data(), i), TimeMulti<umash128>(reps, entropy, data.data(), i)
+         TimeMulti<WrapHash<V4<2>>>(reps, entropy, data.data(), i),
+         TimeMulti<WrapHash<V4<3>>>(reps, entropy, data.data(), i),
+        TimeMulti<WrapHash<V4<4>>>(reps, entropy, data.data(), i),
+        TimeMulti<WrapHash<V4<5>>>(reps, entropy, data.data(), i),
 
           // TimeMulti<WrapHash< Hash<RepeatWrapper<BlockWrapper512, 2>, 6, 2, encoded_dimension,
           //     out_width>(entropy, char_input, length, output);V4<5>>>(reps, entropy, data.data(), i),
@@ -199,9 +199,9 @@ int main(int argc, char** argv) {
           // TimeMulti<WrapHash<V1<5>>>(reps, entropy, data.data(), i),
       };
 
-      // auto cl_time = TimeMulti<ClhashWrap>(reps, entropy, data.data(), i);
+       auto cl_time = TimeMulti<ClhashWrap>(reps, entropy, data.data(), i);
       // auto cl_time128 = TimeMulti<clhashWrap128>(reps, entropy, data.data(), i);
-      // auto um_time = TimeMulti<umashWrap>(reps, entropy, data.data(), i);
+       auto um_time = TimeMulti<umashWrap>(reps, entropy, data.data(), i);
       // auto um_time128 = TimeMulti<umash128>(reps, entropy, data.data(), i);
 
       if (timings.find(i) == timings.end()) {
@@ -212,9 +212,9 @@ int main(int argc, char** argv) {
         timings[i][k] = max(timings[i][k], 1.0 * i / hh_time[k].count());
       }
 
-      // timings[i][k + 0] = max(timings[i][k + 0], 1.0 * i / cl_time.count());
+       timings[i][k + 0] = max(timings[i][k + 0], 1.0 * i / cl_time.count());
       // timings[i][k + 1] = max(timings[i][k + 1], 1.0 * i / cl_time128.count());
-      // timings[i][k + 2] = max(timings[i][k + 2], 1.0 * i / um_time.count());
+       timings[i][k + 1] = max(timings[i][k + 1], 1.0 * i / um_time.count());
       // timings[i][k + 3] = max(timings[i][k + 3], 1.0 * i / um_time128.count());
     }
   }
@@ -229,6 +229,8 @@ int main(int argc, char** argv) {
     for (int i = 0; i < 4; ++i) {
       cout << "\t" << j.second[i];
     }
+    cout << "\t" << j.second[4];
+    cout << "\t" << j.second[5];
     cout << endl;
   }
 

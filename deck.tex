@@ -1,0 +1,460 @@
+\documentclass[xcolor=dvipsnames,hyperref={hidelinks}]{beamer}
+%\usecolortheme[named=Black]{structure}
+%\PassOptionsToPackage{hyphens}{url}\usepackage[pdfusetitle,hidelinks]{hyperref}
+
+\AtBeginDocument{%\bfseries
+  \Large\selectfont} % normal text 
+
+%% \setbeamercolor{palette primary}{bg=black,fg=white}
+%% \setbeamercolor{palette secondary}{bg=black,fg=white}
+%% \setbeamercolor{palette tertiary}{bg=black,fg=white}
+%% \setbeamercolor{palette quaternary}{bg=black,fg=white}
+
+%% \setbeamercolor{section in toc}{bg=black,fg=black} % TOC sections
+
+%\setbeamercolor{structure}{bg=black,fg=white} % itemize, enumerate, etc
+%\setbeamercolor{normal text}{bg=black,fg=white} % TOC sections
+
+%\setbeamerfont{normal text}{series=\bfseries,size=\Huge}
+\setbeamerfont{title}{size=\Huge}
+\setbeamerfont{frametitle}{size=\Huge}
+
+\newcommand{\defeq}{\;\genfrac{}{}{0pt}{2}{\text{def}}{=}\;}
+\DeclareMathOperator{\adj}{adj}
+%\DeclareMathOperator{\Pr}{Pr}
+
+\usepackage{verbatim}
+\usepackage{amsfonts}
+
+\renewcommand*{\thefootnote}{\fnsymbol{footnote}}
+
+\begin{document}
+
+\title{HalftimeHash: Modern Hashing without 64-bit Multipliers or Finite Fields}
+\author{Jim Apple}
+\date{August, 2021}
+\institute{\href{mailto:jbapple@apache.org}{\Large jbapple@apache.org}}
+
+\frame{\titlepage}
+
+\begin{frame}
+  HalftimeHash is a hash function with tunable collision probability, designed for long input (1KB+).
+\end{frame}
+
+\begin{frame}
+  \begin{center}
+    \includegraphics[width=9.0cm]{line-cl-hh24-floor.eps}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \begin{center}
+    \includegraphics[width=9.0cm]{amd-cl-hh24-floor.eps}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Collapsing the universe}
+  Universe collapsing hashes long strings into short strings (16 bytes to 40 bytes)
+  % After collapsing the universe, use hash composition:
+  % Use tabulation or SipHash on the resulting short string
+  \pause \\
+  $ $ \\
+  Useful for randomized data structures where randomness depends on key hashes, such as hash tables or Bloom filters
+\end{frame}
+
+\begin{frame}
+  \frametitle{Output length}
+
+  In HalftimeHash, the longer the output length, the lower the collision probability:
+  \pause
+
+%Roughly $(2^{-32}\lg n)^{(b-8)/4}$
+%\pause
+$ $ \\ % For 250kb
+ $\varepsilon = 2^{-59}$ for $16$-byte output %, 89, 116,
+and $2^{-145}$ for $40$-byte output
+
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Output length}
+
+  The basic primitive has 8-byte output
+  \pause
+
+  $ $ \\
+  The collision probability could be achieved by applying this primitive $k$ times for $k \in \{2, 3, 4, 5\}$
+  \pause
+
+  $ $ \\
+  Avoiding this extra computation is the theory contribution of this paper. Engineering discussion comes after.
+%Roughly $(2^{-32}\lg n)^{(b-8)/4}$
+%\pause
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine}
+  Let $F$ be a hash function\footnote{Family of hash functions} from $V^n$ to $V$ with collision probability of $\varepsilon$
+  \pause
+
+  $ $ \\
+  EHC stretches it to $V^{k+1}$ and $\varepsilon ^ {k+1}$
+  %% \begin{itemize}
+  %% \item Almost-universal universe-collapsing family from $V^n$ to $V^{m+1}$ for specific $n$ and $m$
+  %%   \pause
+  %% \item Applied at the leaves, this improves $\varepsilon$ to $\varepsilon^{m+1}$ without having to do $m$ tree hashes
+  %% \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine}
+  Collapsing $V^n$ to $V^{k+1}$:
+  \begin{enumerate}
+  \item Apply an encoding that extends $V^n$ to $V^{n+k}$
+    \pause
+  \item Hash each component of $V^{n+k}$
+    \pause
+  \item Apply a linear map from $V^{n+k}$ to $V^{k+1}$
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Encode-hash-combine}
+  This is an old result for $V$ a field
+  \pause
+  \\
+$ $\\
+  Not applicable in \verb|uint64_t|.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine}
+  Each of these (encoding, component hash, linear map) must have certain characteristics
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine: encode}
+  Must have {\em distance} $k+1$: Hamming distance between outputs is never in $[1,k]$
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine: hash function from $V$ to $V$}
+  Must be almost-$\Delta$-universal:
+  \[
+  \forall \delta, a \neq b, \Pr_s[H_s(a) - H_s(b) = \delta] \le \varepsilon
+  \]
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine: linear map}
+
+  Let $T'$ be the set of all $k+1$ combinations of columns of $T$
+  \pause
+
+  $ $\\
+  Must have $\forall S \in T', S$ is non-singular
+\end{frame}
+
+\begin{frame}
+
+  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{64}}$}}
+
+  Still must have $\forall S \in T', S$ is non-singular in $\mathbb{Z}$.
+  \pause
+
+  $ $\\
+  Let $\widehat{x}$ denote the largest power of $2$ that divides $x$.
+  \pause
+
+  $ $\\
+  The smaller $\widehat{x}$ is, the closer $x$ is to invertible in $\mathbb{Z}_{2^{64}}$:
+  \[
+  \widehat{x} = \left|\{y : xy = 0\}\right| + 1
+  \]
+\end{frame}
+
+\begin{frame}
+
+  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{64}}$}}
+
+  Let $m$ be $\max_{S \in T'} \widehat{\det(S)}$.
+  \pause
+
+  $ $ \\
+  Then the collision probability of EHC in $\mathbb{Z}_{2^{64}}$ is not $\varepsilon^{k+1}$, but $(m \varepsilon)^{k+1}$
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{64}}$}}
+
+  If two input strings differ, their Hamming distance after encoding is at least $k+1$.
+  Let $x$ and $y$ be their encoded values.
+  \pause
+
+  $ $\\
+  We want to show that $\Pr_s\left[H_s(x)-H_s(y) = \delta\right] \le (m \varepsilon)^{k+1}$
+  \pause
+
+  $ $\\
+  Let $U$ be a set of $k+1$ places there they differ. Let $R$ be the subset of $T$'s columns indexed by $U$.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{64}}$}}
+
+  The adjoint of $R$ has entries in $\mathbb{Z}$, and so can be interpreted over $\mathbb{Z}_{2^{64}}$.
+  \pause
+
+  $ $\\
+  $R$ is also non-singular in $\mathbb{Z}$, so $R^{-1}$ exists and $R^{-1} = \adj(R) / \det(R)$.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine: linear map \textbf{in $\mathbb{Z}_{2^{64}}$}}
+
+  $ $\\
+  Let $\det(R) = o 2^{m'}$, where $o$ is odd. Note that $2^{m'} \le m$ and $o$ has an inverse in $\mathbb{Z}_{2^{64}}$.
+  
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine: linear map \textbf{in $\mathbb{Z}_{2^{64}}$}}
+
+  After some arithmetic manipulation, can show that
+  \[
+  \begin{array}{lcrcl}
+    \Pr_s[R_s(x) - R_s(y) &= &\delta] & = & \\
+    \Pr_s[2^{m'}(R_s(x) - R_s(y)) & = & o^{-1} \adj(R) \delta] & = & \\  % by definition of adjoint
+    \Pr_s[R_s(x) - R_s(y) &\equiv& \delta \bmod 2^{64 - m'}] & \\ % by number of zero-multipliers of 2^{m'}
+    & \le & (2^{m'} \varepsilon)^{k} % by indeendence of $s_i$ and almost-$\Delta$-universality of $H$
+  \end{array}
+  \]
+\end{frame}
+
+\begin{frame}
+
+  \frametitle{Engineering HalftimeHash}
+  \pause
+  \begin{itemize}
+  \item Use a code that can be evaluated without any multiplications
+  \pause
+  \item Use $T$ such that most scalars are powers of two, for shifting
+  \pause
+  \item Use NH for hashing medium-length input into short output, a family that takes half as many multiplications as its input size
+  \pause
+  \item Supplement EHC with a Merkle-tree-like construction without requiring finite fields
+  \pause
+  \item Use AVX2 and AVX-512 instructions to perform 4-8 multiplications simultaneously
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Engineering HalftimeHash}
+  \begin{center}
+    \includegraphics[width=8.0cm]{line-cl-hh24-floor.eps}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Engineering HalftimeHash}
+  \begin{center}
+    \includegraphics[width=8.0cm]{amd-cl-hh24-floor.eps}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Engineering HalftimeHash}
+  \begin{center}
+    \includegraphics[width=9.0cm]{speed-v-epsilon.eps}
+  \end{center}
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Engineering HalftimeHash: tree hashing}
+  Fast almost-universal families like clhash, UMASH, and Poly1305 use Horner's method to compute hash of arbitrary length strings.
+  \pause
+
+  $ $\\
+  This, too, uses finite fields.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Engineering HalftimeHash: tree hashing}
+  If $H$ is an almost-universal hash family from $V^2$ to $V$, then
+  $G_{s,t} \defeq H_t(H_s(a, b), H_s(c,d))$ is $2 \varepsilon$-almost universal
+  \pause
+  
+  $ $\\
+  Iterate to get a family from  $V^{2^i}$ to $V$ that is $i \varepsilon$-almost universal
+  % Notice: H(x) is used twice
+  % If iterated, this construction tield s universe-collapsing almost-universal hash family
+\end{frame}
+
+%% \begin{frame}
+%%   \frametitle{Tree hashing}
+%%   \begin{itemize}
+%%   \item If $H$ is an almost-universal hash function from $V^2$ to $V$
+%%     \pause
+%%   \item $\forall x, \Pr[H_x(a, b) = H_x(a', b')] < \varepsilon$
+%%     \pause
+%%   \item $G_{x,y} \defeq H_y(H_x(a, b), H_x(c,d))$ is also almost-universal
+%%     % Notice: H_x is used twice
+%%   \end{itemize}
+%% \end{frame}
+
+\begin{frame}
+  \frametitle{Engineering HalftimeHash: tree hashing}
+  \begin{center}
+    \includegraphics[width=9.0cm]{tree.eps}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Engineering HalftimeHash: tree hashing}
+  \begin{center}
+    \includegraphics[width=9.0cm]{tree-1.eps}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Engineering HalftimeHash: tree hashing}
+  \begin{center}
+    \includegraphics[width=9.0cm]{tree-2.eps}
+  \end{center}
+\end{frame}
+
+%% \begin{frame}
+%%   \frametitle{Engineering HalftimeHash: tree hashing}
+%%   \begin{center}
+%%     \includegraphics[width=9.0cm]{tree-3.eps}
+%%   \end{center}
+%% \end{frame}
+
+
+
+\begin{frame}
+  \begin{center}
+    \url{https://github.com/jbapple/HalftimeHash}
+  \end{center}
+\end{frame}
+
+
+
+%% \begin{frame}
+
+%%   \frametitle{Engineering HalftimeHash}
+%%   \pause
+%%   \begin{itemize}
+%%   \item Use a code that can be evaluated without any multiplications
+%%   \item Use $T$ such that most scalars are powers of two, for shifting
+%%   \item Use NH for hashing, a family that takes half as many multiplications as its input size
+%%   \item Supplement EHC with a Merkle-tree-like construction without requiring finite fields
+%%   \item Use AVX2 and AVX-512 instructions to perform 4-8 multiplications simultaneously
+%%   \end{itemize}
+%% \end{frame}
+
+
+%  Where $\beta \defeq o^{-1}\adj(R)\delta$.
+  %Since $R$ is non-singular in $\mathbb{Z}$, the {\em adjoint} of $R$ is $\det(R) \cdot R$, which is also a linear transform over $\mathbb{Z}_{2^{64}}$.
+
+%  \pause
+%  $ $\\
+%  Let $\det(R) = o 2^{m'}$, where $o$ is odd. $m' \le m$.
+% \end{frame}
+
+%% \begin{frame}
+%%   Intuition of the proof is that if $a \neq b$, then there are $m+1$ places they likely differ after application of coding and hashing.
+%%   \pause
+%%   Those places select a non-singular matrix out of the linear transformation.
+%%   \pause
+%%   Since this matrix has an inverse can apply it to uniquely solve $T \cdot \beta = \Delta$.
+%% \end{frame}
+
+%% \begin{frame}
+%%   To get a hash value in $V^{m+1}$ from an input string:
+%%   \begin{enumerate}
+%%   \item Apply EHC from $V^k$ to $V^{m+1}$ on the input, blocked into groups of size $k$.
+%%   \item Run $m+1$ copies of tree hash on the result.
+%%   \end{enumerate}
+%% \end{frame}
+
+
+%% \begin{frame}
+%%   EHC engineering challenges:
+%%   \begin{enumerate}
+%%   \item Field-based erasure codes are expensive to calculate
+%%   \item Application of a linear map requires field multiplications, which are also hard to calculate
+%%   \end{enumerate}
+%% \end{frame}
+
+%% \begin{frame}
+%%   \frametitle{Generalized EHC}
+%%   A weakening of EHC that works over $\mathbb{Z}_{2^{64}}$.
+%%   \pause \\
+%%   Let $p$ be the largest power of 2 that divides the determinant of any
+%%   $m+1$ columns in the matrix of the linear map.
+%%   \pause \\
+%%   Then EHC is $\varepsilon^{m+1}2^{p(m+1)}$-almost universal
+%% \end{frame}
+
+%% \begin{frame}
+%%   Proof intuition is the same as EHC, with one addition:
+%%   \\
+%%   In $\mathbb{Z}_{2^{64}}$, some matrices are {\em almost} non-singular, in that there are only a few non-zero vectors that have image $(0, 0)$.
+%% \\
+%%   For example, the matrix $(1,2),(0,2)$ has only $(0, 2)$ as a non-zero member of the kernel in $\mathbb{Z}_4$.
+%%   \\
+%% \end{frame}
+
+
+%% %% \begin{frame}
+%% %%   $\varepsilon$-almost universal hash families avoid collisions
+
+%% %%   \[
+%% %%   \forall x \neq y \in D,
+%% %%   \Pr[H(x) = H(y)] \leq \varepsilon
+%% %%   \]
+
+%% %%   %with the probability is taken over the space of the initialization
+%% %% \end{frame}
+
+%% \begin{frame}
+%%   HalftimeHash building blocks:
+%%   \begin{itemize}
+%%   \item NH % ($\sum (x_i + k_i) * (x_{i+1} + k_{i+1})$)
+%%   \item Erasure codes over $\mathbb{Z}_{2^{64}}^3$
+%% %  \item AVX2 and AVX-512 SIMD instructions
+%%   \item Tree hashing
+%%   \item Encode-Hash-Combine
+%%   \end{itemize}
+%%   % I'll only cover the last two, as they explain most of the structure of HalftimeHash
+%% \end{frame}
+
+
+
+
+%% \begin{frame}
+%%   The engineering choices include:
+%%   \\
+%%   Using non-linear erasure codes over $\mathbb{Z}_{2^{64}}^3$ that only uses Xor's, not multiplication.
+%%   \\
+%%   Using AVX2 and AVX-512 SIMD instructions that can do up to 16 different $32$-bit $\times 32$-bit $\to 64$-bit multiplications in a single instruction
+%%   \\
+%%   Terminating the tree hash portion and moving to a different scheme when close to the end of the string
+%%   \\
+%%   NH hashing: $\sum (x_i + k_i) * (x_{i+1} + k_{i+1})$
+%% \end{frame}
+
+%% %% \begin{frame}
+%% %%   \begin{center}
+%% %%     \includegraphics[width=9.0cm]{smhasher-speed.eps}
+%% %%   \end{center}
+%% %% \end{frame}
+
+\end{document}
+
+%%  LocalWords:  HalftimeHash treaps EHC
