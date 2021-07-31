@@ -1,4 +1,4 @@
-\documentclass[xcolor=dvipsnames,hyperref={hidelinks}]{beamer}
+\documentclass[xcolor=dvipsnames]{beamer}
 %\usecolortheme[named=Black]{structure}
 %\PassOptionsToPackage{hyphens}{url}\usepackage[pdfusetitle,hidelinks]{hyperref}
 
@@ -25,6 +25,7 @@
 
 \usepackage{verbatim}
 \usepackage{amsfonts}
+\usepackage{hyperref}
 
 \renewcommand*{\thefootnote}{\fnsymbol{footnote}}
 
@@ -32,19 +33,51 @@
 
 \title{HalftimeHash: Modern Hashing without 64-bit Multipliers or Finite Fields}
 \author{Jim Apple}
-\date{August, 2021}
+\date{}
 \institute{\href{mailto:jbapple@apache.org}{\Large jbapple@apache.org}}
 
 \frame{\titlepage}
 
 \begin{frame}
-  HalftimeHash is a hash function with tunable collision probability, designed for long input (1KB+).
+  HalftimeHash is a new hash function designed for long input (1KB+).
+\end{frame}
+
+%% \begin{frame}
+%%   \begin{center}
+%%     \includegraphics[width=9.0cm]{line-cl-hh24-floor.eps}
+%%   \end{center}
+%% \end{frame}
+
+%% \begin{frame}
+%%   \frametitle{Why a hash function for long strings?}
+%%   Universe collapsing hashes long strings into short strings (16 bytes to 40 bytes)
+%%   % After collapsing the universe, use hash composition:
+%%   % Use tabulation or SipHash on the resulting short string
+%%   \pause \\
+%%   $ $ \\
+%%   Useful for randomized data structures where randomness depends on key hashes, such as hash tables or Bloom filters
+%% \end{frame}
+
+\begin{frame}
+  \frametitle{Why not use 64-bit multipliers or finite fields?}
+  Multiplying two 64-bit numbers to produce a 128-bit number is expensive % and is required for fields with more than $2^{32}$ elements.
+  \pause
+
+  $ $\\
+  It is not present in all common ISAs
+  \pause
+
+  $ $\\
+  It is missing from some popular programming languages, including Java, Python, and Swift
 \end{frame}
 
 \begin{frame}
-  \begin{center}
-    \includegraphics[width=9.0cm]{line-cl-hh24-floor.eps}
-  \end{center}
+  \frametitle{But \ldots}
+  32-bit hash functions produce much higher collision probability: $2^{-32}$, not $2^{-64}$
+\end{frame}
+
+\begin{frame}
+  Overcoming that limitation is the main contribution of this work
 \end{frame}
 
 \begin{frame}
@@ -53,72 +86,102 @@
   \end{center}
 \end{frame}
 
-\begin{frame}
-  \frametitle{Collapsing the universe}
-  Universe collapsing hashes long strings into short strings (16 bytes to 40 bytes)
-  % After collapsing the universe, use hash composition:
-  % Use tabulation or SipHash on the resulting short string
-  \pause \\
-  $ $ \\
-  Useful for randomized data structures where randomness depends on key hashes, such as hash tables or Bloom filters
-\end{frame}
+
+
+%% \begin{frame}
+%%   \frametitle{Why tunable collision probability?}
+
+%%   In HalftimeHash, the longer the output length, the lower the collision probability:
+%%   \pause
+
+%% %Roughly $(2^{-32}\lg n)^{(b-8)/4}$
+%% %\pause
+%% $ $ \\ % For 250kb
+%%  $\varepsilon = 2^{-59}$ for $16$-byte output %, 89, 116,
+%% and $2^{-145}$ for $40$-byte output
+
+%% \end{frame}
+
+
+%% \begin{frame}
+%%   \frametitle{Why tunable collision probability?}
+
+%%   The basic primitive has 8-byte output and collision probability more than $2^{-32}$.
+%%   This is too high for many applications
+%%   \pause
+
+%%   $ $ \\
+%%   Lower collision probability could be achieved by hashing twice or more
+%%   \pause
+
+%%   $ $ \\
+%%   Avoiding this extra computation is the theory contribution of this paper
+%%   %Engineering discussion comes after.
+%% %Roughly $(2^{-32}\lg n)^{(b-8)/4}$
+%% %\pause
+
+%% \end{frame}
+
+
+
+%% \begin{frame}
+%%   \begin{center}
+%%     \includegraphics[width=9.0cm]{amd-cl-hh24-floor.eps}
+%%   \end{center}
+%% \end{frame}
+
 
 \begin{frame}
-  \frametitle{Output length}
+  \frametitle{How do the fastest hash functions work?}
 
-  In HalftimeHash, the longer the output length, the lower the collision probability:
+  For UMASH and clhash:
   \pause
-
-%Roughly $(2^{-32}\lg n)^{(b-8)/4}$
-%\pause
-$ $ \\ % For 250kb
- $\varepsilon = 2^{-59}$ for $16$-byte output %, 89, 116,
-and $2^{-145}$ for $40$-byte output
-
-\end{frame}
-
-
-\begin{frame}
-  \frametitle{Output length}
-
-  The basic primitive has 8-byte output
-  \pause
-
-  $ $ \\
-  The collision probability could be achieved by applying this primitive $k$ times for $k \in \{2, 3, 4, 5\}$
-  \pause
-
-  $ $ \\
-  Avoiding this extra computation is the theory contribution of this paper. Engineering discussion comes after.
-%Roughly $(2^{-32}\lg n)^{(b-8)/4}$
-%\pause
-
-\end{frame}
-
-\begin{frame}
-  \frametitle{Encode-hash-combine}
-  Let $F$ be a hash function\footnote{Family of hash functions} from $V^n$ to $V$ with collision probability of $\varepsilon$
-  \pause
-
-  $ $ \\
-  EHC stretches it to $V^{k+1}$ and $\varepsilon ^ {k+1}$
-  %% \begin{itemize}
-  %% \item Almost-universal universe-collapsing family from $V^n$ to $V^{m+1}$ for specific $n$ and $m$
-  %%   \pause
-  %% \item Applied at the leaves, this improves $\varepsilon$ to $\varepsilon^{m+1}$ without having to do $m$ tree hashes
-  %% \end{itemize}
-\end{frame}
-
-\begin{frame}
-  \frametitle{Encode-hash-combine}
-  Collapsing $V^n$ to $V^{k+1}$:
+  $ $\\
   \begin{enumerate}
-  \item Apply an encoding that extends $V^n$ to $V^{n+k}$
+  \item Divide the input into equal-length constant-sized blocks
     \pause
-  \item Hash each component of $V^{n+k}$
+  \item Hash each block down to 128 bits
+    \pause
+    \item Combine the results using polynomial hashing
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}
+  \frametitle{How do the fastest hash functions work?}
+  Most of the work is done in step two, hashing each block down to 128 bits
+  \pause \\ $ $ \\
+  In clhash and UMASH, the collision probability at this step is $2^{-64}$.
+  \pause \\ $ $ \\
+  In HalftimeHash the collision probability can be as low as $2^{-145}$ (for 320-bit codomain)
+\end{frame}
+
+
+%% \begin{frame}
+%%   \frametitle{Encode-hash-combine}
+%%   Let $F$ be a hash function\footnote{Family of hash functions} from $V^n$ to $V$ with collision probability of $\varepsilon$
+%%   \pause
+
+%%   $ $ \\
+%%   EHC stretches it to $V^{k+1}$ and $\varepsilon ^ {k+1}$
+%%   %% \begin{itemize}
+%%   %% \item Almost-universal universe-collapsing family from $V^n$ to $V^{m+1}$ for specific $n$ and $m$
+%%   %%   \pause
+%%   %% \item Applied at the leaves, this improves $\varepsilon$ to $\varepsilon^{m+1}$ without having to do $m$ tree hashes
+%%   %% \end{itemize}
+%% \end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine}
+%  Collapsing $V^n$ to $V^{k+1}$:
+  \begin{enumerate}
+  \item Apply an erasure encoding that slightly extends $V^n$ to $V^{n+k}$
+    \pause
+  \item Hash each component of $V^{n+k}$ independently
     \pause
   \item Apply a linear map from $V^{n+k}$ to $V^{k+1}$
   \end{enumerate}
+  \pause
+  The output has collision probability $\varepsilon^{k+1}$
 \end{frame}
 
 \begin{frame}[fragile]
@@ -127,34 +190,49 @@ and $2^{-145}$ for $40$-byte output
   \pause
   \\
 $ $\\
-  Not applicable in \verb|uint64_t|.
+  Not applicable in \verb|uint64_t|
 \end{frame}
 
-\begin{frame}
-  \frametitle{Encode-hash-combine}
-  Each of these (encoding, component hash, linear map) must have certain characteristics
-\end{frame}
+%% \begin{frame}
+%%   \frametitle{Encode-hash-combine}
+%%   Each of these (encoding, component hash, linear map) must have certain characteristics
+%% \end{frame}
+
+%% \begin{frame}
+%%   \frametitle{Encode-hash-combine: encode}
+%%   Must have {\em distance} $k+1$: Hamming distance between outputs is never in $[1,k]$
+%% \end{frame}
+
+%% \begin{frame}
+%%   \frametitle{Encode-hash-combine: hash function from $V$ to $V$}
+%%   Must be almost-$\Delta$-universal:
+%%   \[
+%%   \forall \delta, a \neq b, \Pr_s[H_s(a) - H_s(b) = \delta] \le \varepsilon
+%%   \]
+%% \end{frame}
 
 \begin{frame}
-  \frametitle{Encode-hash-combine: encode}
-  Must have {\em distance} $k+1$: Hamming distance between outputs is never in $[1,k]$
+  \frametitle{Encode-hash-combine: linear map}
+  \begin{enumerate}
+  \item Apply an erasure encoding that slightly extends $V^n$ to $V^{n+k}$
+  \item Hash each component of $V^{n+k}$ independently
+  \item Apply a linear map $T$ from $V^{n+k}$ to $V^{k+1}$
+  \end{enumerate}
 \end{frame}
 
-\begin{frame}
-  \frametitle{Encode-hash-combine: hash function from $V$ to $V$}
-  Must be almost-$\Delta$-universal:
-  \[
-  \forall \delta, a \neq b, \Pr_s[H_s(a) - H_s(b) = \delta] \le \varepsilon
-  \]
-\end{frame}
 
 \begin{frame}
   \frametitle{Encode-hash-combine: linear map}
 
+  \begin{enumerate}
+{\color{gray}  \item Apply an erasure encoding that slightly extends $V^n$ to $V^{n+k}$}
+{\color{gray}  \item Hash each component of $V^{n+k}$ independently}
+  \item Apply a linear map $T$ from $V^{n+k}$ to $V^{k+1}$
+  \end{enumerate}
+$ $ \\
   Let $T'$ be the set of all $k+1$ combinations of columns of $T$
-  \pause
 
-  $ $\\
+  \pause $ $ \\
   Must have $\forall S \in T', S$ is non-singular
 \end{frame}
 
@@ -162,7 +240,7 @@ $ $\\
 
   \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{64}}$}}
 
-  Still must have $\forall S \in T', S$ is non-singular in $\mathbb{Z}$.
+  Still must have $\forall S \in T', S$ is non-singular in $\mathbb{Z}$, but the conclusion is weaker.
   \pause
 
   $ $\\
@@ -187,52 +265,6 @@ $ $\\
   Then the collision probability of EHC in $\mathbb{Z}_{2^{64}}$ is not $\varepsilon^{k+1}$, but $(m \varepsilon)^{k+1}$
 \end{frame}
 
-\begin{frame}
-  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{64}}$}}
-
-  If two input strings differ, their Hamming distance after encoding is at least $k+1$.
-  Let $x$ and $y$ be their encoded values.
-  \pause
-
-  $ $\\
-  We want to show that $\Pr_s\left[H_s(x)-H_s(y) = \delta\right] \le (m \varepsilon)^{k+1}$
-  \pause
-
-  $ $\\
-  Let $U$ be a set of $k+1$ places there they differ. Let $R$ be the subset of $T$'s columns indexed by $U$.
-\end{frame}
-
-\begin{frame}
-  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{64}}$}}
-
-  The adjoint of $R$ has entries in $\mathbb{Z}$, and so can be interpreted over $\mathbb{Z}_{2^{64}}$.
-  \pause
-
-  $ $\\
-  $R$ is also non-singular in $\mathbb{Z}$, so $R^{-1}$ exists and $R^{-1} = \adj(R) / \det(R)$.
-\end{frame}
-
-\begin{frame}
-  \frametitle{Encode-hash-combine: linear map \textbf{in $\mathbb{Z}_{2^{64}}$}}
-
-  $ $\\
-  Let $\det(R) = o 2^{m'}$, where $o$ is odd. Note that $2^{m'} \le m$ and $o$ has an inverse in $\mathbb{Z}_{2^{64}}$.
-  
-\end{frame}
-
-\begin{frame}
-  \frametitle{Encode-hash-combine: linear map \textbf{in $\mathbb{Z}_{2^{64}}$}}
-
-  After some arithmetic manipulation, can show that
-  \[
-  \begin{array}{lcrcl}
-    \Pr_s[R_s(x) - R_s(y) &= &\delta] & = & \\
-    \Pr_s[2^{m'}(R_s(x) - R_s(y)) & = & o^{-1} \adj(R) \delta] & = & \\  % by definition of adjoint
-    \Pr_s[R_s(x) - R_s(y) &\equiv& \delta \bmod 2^{64 - m'}] & \\ % by number of zero-multipliers of 2^{m'}
-    & \le & (2^{m'} \varepsilon)^{k} % by indeendence of $s_i$ and almost-$\Delta$-universality of $H$
-  \end{array}
-  \]
-\end{frame}
 
 \begin{frame}
 
@@ -242,8 +274,8 @@ $ $\\
   \item Use a code that can be evaluated without any multiplications
   \pause
   \item Use $T$ such that most scalars are powers of two, for shifting
-  \pause
-  \item Use NH for hashing medium-length input into short output, a family that takes half as many multiplications as its input size
+  %% \pause
+  %% \item Use NH for hashing medium-length input into short output, a family that takes half as many multiplications as its input size
   \pause
   \item Supplement EHC with a Merkle-tree-like construction without requiring finite fields
   \pause
@@ -272,6 +304,69 @@ $ $\\
   \end{center}
 \end{frame}
 
+
+\begin{frame}
+  \begin{center}
+    \href{https://github.com/jbapple/HalftimeHash}{github.com/jbapple/HalftimeHash}
+    $ $ \\
+    $ $ \\
+    \href{mailto:jbapple@apache.org}{\Large jbapple@apache.org}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{64}}$}}
+
+  If two input strings differ, their Hamming distance after encoding is at least $k+1$.
+  Let $x$ and $y$ be their encoded values.
+  \pause
+
+  $ $\\
+  We want to show that $\Pr_s\left[T(H_s(x)-H_s(y)) = \delta\right] \le (m \varepsilon)^{k+1}$
+  \pause
+
+  $ $\\
+  Let $U$ be a set of $k+1$ places where $x$ and $y$ differ.
+%  If The probability that $H_s(x) = H_s(y)$ is small: $\varepsilon^k$.
+%  Otherwise, there is at least one difference.
+  Let $R$ be the subset of $T$'s columns indexed by $U$
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{64}}$}}
+
+  The adjugate of $R$ has entries in $\mathbb{Z}$, and so can be interpreted over $\mathbb{Z}_{2^{64}}$.
+  \pause
+
+  $ $\\
+  $R$ is also non-singular in $\mathbb{Z}$, so $R^{-1}$ exists in $\mathbb{Q}$ and $R^{-1} = \adj(R) / \det(R)$.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine: linear map \textbf{in $\mathbb{Z}_{2^{64}}$}}
+
+  $ $\\
+  Let $\det(R) = o 2^{m'}$, where $o$ is odd. Note that $2^{m'} \le m$ and $o$ has an inverse in $\mathbb{Z}_{2^{64}}$.
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine: linear map \textbf{in $\mathbb{Z}_{2^{64}}$}}
+
+  After some arithmetic manipulation, can show that
+  \[
+  \begin{array}{lrcrcl}
+    \Pr_s[&R(H_s(x) - H_s(y)) & \equiv & \delta \bmod 2^{64}] & \le & \\
+    % adjugate sends equal to equal, but might also make non-equal, equal
+    \Pr_s[&2^{m'}(H_s(x) - H_s(y)) & \equiv & o^{-1} \delta \bmod 2^{64}] & = & \\
+    \Pr_s[&2^{m'}(H_s(x) - H_s(y)) & \equiv & 2^{m'} \delta' \bmod 2^{64}] & = & \\
+    % Another way to think og this next step: the high m' bits of \delta' can be anything
+    \Pr_s[&\bigvee_{0 \le c < 2^{m'}} H_s(x) - H_s(y) & = &  \delta'  + c 2^{64 -m'}] &  & \\
+    % union bound
+    & & &\le  (2^{m'} \varepsilon)^{k}
+  \end{array}
+  \]
+\end{frame}
 
 \begin{frame}
   \frametitle{Engineering HalftimeHash: tree hashing}
@@ -334,13 +429,6 @@ $ $\\
 %%   \end{center}
 %% \end{frame}
 
-
-
-\begin{frame}
-  \begin{center}
-    \url{https://github.com/jbapple/HalftimeHash}
-  \end{center}
-\end{frame}
 
 
 
