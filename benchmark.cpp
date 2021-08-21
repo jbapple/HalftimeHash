@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
            << "Halftime" << (j * 8) << "v" << i;
     }
   }
-  cout << "\t clhash \t umash";
+  cout << "\t clhash \t UMASH";
   cout << endl;
 
   uint64_t loop_count = 4;

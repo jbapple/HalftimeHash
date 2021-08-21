@@ -38,9 +38,9 @@
 
 \frame{\titlepage}
 
-\begin{frame}
-  HalftimeHash is a new hash function designed for long input (1KB+).
-\end{frame}
+%% \begin{frame}
+%%   HalftimeHash is a new hash function designed for long input (1KB+).
+%% \end{frame}
 
 %% \begin{frame}
 %%   \begin{center}
@@ -60,24 +60,34 @@
 
 \begin{frame}
   \frametitle{Why not use 64-bit multipliers or finite fields?}
-  Multiplying two 64-bit numbers to produce a 128-bit number is expensive % and is required for fields with more than $2^{32}$ elements.
+  The multiplication of two 64-bit numbers to produce a 128-bit number is not available in SIMD % and is required for fields with more than $2^{32}$ elements.
   \pause
 
   $ $\\
-  It is not present in all common ISAs
+  It's also missing from popular programming languages like Java, Python, and Swift
   \pause
 
   $ $\\
-  It is missing from some popular programming languages, including Java, Python, and Swift
+  Finite field multiplications either require more than one operation or are missing from popular programming languages
+  \pause
+
+  $ $\\
+  Impedes performance and portability
 \end{frame}
 
 \begin{frame}
-  \frametitle{But \ldots}
+  \frametitle{So why use them at all?}
   32-bit hash functions produce much higher collision probability: $2^{-32}$, not $2^{-64}$
+  \pause
+
+  $ $\\
+  Finite fields simplify hash functions
 \end{frame}
 
 \begin{frame}
-  Overcoming that limitation is the main contribution of this work
+  \begin{center}
+    Overcoming those limitations (without sacrificing performance) is the main contribution of this work
+  \end{center}
 \end{frame}
 
 \begin{frame}
@@ -140,7 +150,7 @@
   \begin{enumerate}
   \item Divide the input into equal-length constant-sized blocks
     \pause
-  \item Hash each block down to 128 bits
+  \item Hash each block down to a single machine word
     \pause
     \item Combine the results using polynomial hashing
   \end{enumerate}
@@ -148,11 +158,11 @@
 
 \begin{frame}
   \frametitle{How do the fastest hash functions work?}
-  Most of the work is done in step two, hashing each block down to 128 bits
+  Most of the work is done in step two, hashing each block down to a single machine word
   \pause \\ $ $ \\
-  In clhash and UMASH, the collision probability at this step is $2^{-64}$.
+  Using 32-bit arithmetic, the collision probability would be $2^{-32}$
   \pause \\ $ $ \\
-  In HalftimeHash the collision probability can be as low as $2^{-145}$ (for 320-bit codomain)
+  HalftimeHash reduces this to as little as $2^{-145}$ \pause (more than one output word)
 \end{frame}
 
 
@@ -174,23 +184,23 @@
   \frametitle{Encode-hash-combine}
 %  Collapsing $V^n$ to $V^{k+1}$:
   \begin{enumerate}
-  \item Apply an erasure encoding that slightly extends $V^n$ to $V^{n+k}$
+  \item Apply an erasure encoding that slightly extends $W^c$ to $W^{c+k}$
     \pause
-  \item Hash each component of $V^{n+k}$ independently
+  \item Hash each component of $W^{c+k}$ independently
     \pause
-  \item Apply a linear map from $V^{n+k}$ to $V^{k+1}$
+  \item Apply a linear map from $W^{c+k}$ to $W^{k+1}$
   \end{enumerate}
   \pause
-  The output has collision probability $\varepsilon^{k+1}$
+  If $\varepsilon$ is the collision probability of the $W^c \to W$ collapse, the output of EHC has collision probability $\varepsilon^{k+1}$
 \end{frame}
 
 \begin{frame}[fragile]
   \frametitle{Encode-hash-combine}
-  This is an old result for $V$ a field
+  This is an old result for $W$ a field
   \pause
   \\
 $ $\\
-  Not applicable in \verb|uint64_t|
+  Not applicable in \verb|uint32_t|
 \end{frame}
 
 %% \begin{frame}
@@ -214,9 +224,9 @@ $ $\\
 \begin{frame}
   \frametitle{Encode-hash-combine: linear map}
   \begin{enumerate}
-  \item Apply an erasure encoding that slightly extends $V^n$ to $V^{n+k}$
-  \item Hash each component of $V^{n+k}$ independently
-  \item Apply a linear map $T$ from $V^{n+k}$ to $V^{k+1}$
+  \item Apply an erasure encoding that slightly extends $W^c$ to $W^{c+k}$
+  \item Hash each component of $W^{c+k}$ independently
+  \item Apply a linear map $T$ from $W^{c+k}$ to $W^{k+1}$
   \end{enumerate}
 \end{frame}
 
@@ -225,44 +235,63 @@ $ $\\
   \frametitle{Encode-hash-combine: linear map}
 
   \begin{enumerate}
-{\color{gray}  \item Apply an erasure encoding that slightly extends $V^n$ to $V^{n+k}$}
-{\color{gray}  \item Hash each component of $V^{n+k}$ independently}
-  \item Apply a linear map $T$ from $V^{n+k}$ to $V^{k+1}$
+{\color{gray}  \item Apply an erasure encoding that slightly extends $W^c$ to $W^{c+k}$}
+{\color{gray}  \item Hash each component of $W^{c+k}$ independently}
+  \item Apply a linear map $T$ from $W^{c+k}$ to $W^{k+1}$
   \end{enumerate}
 $ $ \\
   Let $T'$ be the set of all $k+1$ combinations of columns of $T$
 
   \pause $ $ \\
-  Must have $\forall S \in T', S$ is non-singular
+  Must have $\forall S \in T', S$ is non-singular\pause; if $v$ is non-zero, so is $S v$
+\end{frame}
+
+\begin{frame}
+  \begin{center}
+    This is not always possible in $\mathbb{Z}_{2^{32}}$ for all $c$, $k$.
+  \\ \pause
+  $ $ \\
+  But it can be approximated.
+  \end{center}
 \end{frame}
 
 \begin{frame}
 
-  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{64}}$}}
+  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{32}}$}}
 
-  Still must have $\forall S \in T', S$ is non-singular in $\mathbb{Z}$, but the conclusion is weaker.
-  \pause
+  %% Still must have $\forall S \in T', S$ is non-singular in $\mathbb{Z}$ (though not $\mathbb{Z}_{2^{32}}$), but the conclusion is weaker.
+  %% \pause
 
   $ $\\
   Let $\widehat{x}$ denote the largest power of $2$ that divides $x$.
   \pause
 
   $ $\\
-  The smaller $\widehat{x}$ is, the closer $x$ is to invertible in $\mathbb{Z}_{2^{64}}$:
+  The smaller $\widehat{x}$ is, the closer $x$ is to invertible in $\mathbb{Z}_{2^{32}}$:
   \[
-  \widehat{x} = \left|\{y : xy = 0\}\right| + 1
+  \widehat{x} = \left|\{y : x y = 0\}\right|
   \]
+
+  $\widehat{x}$ is a measure of ``how even'' a number is.
+  \pause
+
+  $ $\\
+  If $y$ is non-zero, so is $x y$, mostly, depending on a low $\widehat{x}$
 \end{frame}
 
 \begin{frame}
 
-  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{64}}$}}
+  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{32}}$}}
 
   Let $m$ be $\max_{S \in T'} \widehat{\det(S)}$.
   \pause
 
   $ $ \\
-  Then the collision probability of EHC in $\mathbb{Z}_{2^{64}}$ is not $\varepsilon^{k+1}$, but $(m \varepsilon)^{k+1}$
+  The size of the largest kernel of any $S$ is $m^{k+1}$.
+  \pause
+
+  $ $ \\
+  The collision probability of EHC in $\mathbb{Z}_{2^{32}}$ is not $\varepsilon^{k+1}$, but $(m \varepsilon)^{k+1}$
 \end{frame}
 
 
@@ -271,9 +300,9 @@ $ $ \\
   \frametitle{Engineering HalftimeHash}
   \pause
   \begin{itemize}
-  \item Use a code that can be evaluated without any multiplications
+  \item Encode{\color{gray}-Hash-Combine}: Use a code that can be evaluated without any multiplications
   \pause
-  \item Use $T$ such that most scalars are powers of two, for shifting
+  \item {\color{gray}Encode-Hash-}Combine: Use $T$ such that most scalars are powers of two, for shifting
   %% \pause
   %% \item Use NH for hashing medium-length input into short output, a family that takes half as many multiplications as its input size
   \pause
@@ -283,12 +312,12 @@ $ $ \\
   \end{itemize}
 \end{frame}
 
-\begin{frame}
-  \frametitle{Engineering HalftimeHash}
-  \begin{center}
-    \includegraphics[width=8.0cm]{line-cl-hh24-floor.eps}
-  \end{center}
-\end{frame}
+%% \begin{frame}
+%%   \frametitle{Engineering HalftimeHash}
+%%   \begin{center}
+%%     \includegraphics[width=8.0cm]{line-cl-hh24-floor.eps}
+%%   \end{center}
+%% \end{frame}
 
 \begin{frame}
   \frametitle{Engineering HalftimeHash}
@@ -315,76 +344,24 @@ $ $ \\
 \end{frame}
 
 \begin{frame}
-  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{64}}$}}
-
-  If two input strings differ, their Hamming distance after encoding is at least $k+1$.
-  Let $x$ and $y$ be their encoded values.
+  \frametitle{Polynomial hashing}
+  To hash the sequence $\langle c_0, c_1, c_2, \ldots \rangle$
   \pause
-
-  $ $\\
-  We want to show that $\Pr_s\left[T(H_s(x)-H_s(y)) = \delta\right] \le (m \varepsilon)^{k+1}$
-  \pause
-
-  $ $\\
-  Let $U$ be a set of $k+1$ places where $x$ and $y$ differ.
-%  If The probability that $H_s(x) = H_s(y)$ is small: $\varepsilon^k$.
-%  Otherwise, there is at least one difference.
-  Let $R$ be the subset of $T$'s columns indexed by $U$
-\end{frame}
-
-\begin{frame}
-  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{64}}$}}
-
-  The adjugate of $R$ has entries in $\mathbb{Z}$, and so can be interpreted over $\mathbb{Z}_{2^{64}}$.
-  \pause
-
-  $ $\\
-  $R$ is also non-singular in $\mathbb{Z}$, so $R^{-1}$ exists in $\mathbb{Q}$ and $R^{-1} = \adj(R) / \det(R)$.
-\end{frame}
-
-\begin{frame}
-  \frametitle{Encode-hash-combine: linear map \textbf{in $\mathbb{Z}_{2^{64}}$}}
-
-  $ $\\
-  Let $\det(R) = o 2^{m'}$, where $o$ is odd. Note that $2^{m'} \le m$ and $o$ has an inverse in $\mathbb{Z}_{2^{64}}$.
-
-\end{frame}
-
-\begin{frame}
-  \frametitle{Encode-hash-combine: linear map \textbf{in $\mathbb{Z}_{2^{64}}$}}
-
-  After some arithmetic manipulation, can show that
-  \[
-  \begin{array}{lrcrcl}
-    \Pr_s[&R(H_s(x) - H_s(y)) & \equiv & \delta \bmod 2^{64}] & \le & \\
-    % adjugate sends equal to equal, but might also make non-equal, equal
-    \Pr_s[&2^{m'}(H_s(x) - H_s(y)) & \equiv & o^{-1} \delta \bmod 2^{64}] & = & \\
-    \Pr_s[&2^{m'}(H_s(x) - H_s(y)) & \equiv & 2^{m'} \delta' \bmod 2^{64}] & = & \\
-    % Another way to think og this next step: the high m' bits of \delta' can be anything
-    \Pr_s[&\bigvee_{0 \le c < 2^{m'}} H_s(x) - H_s(y) & = &  \delta'  + c 2^{64 -m'}] &  & \\
-    % union bound
-    & & &\le  (2^{m'} \varepsilon)^{k}
-  \end{array}
-  \]
+  \begin{itemize}
+  \item Pick a random seed $x$.
+    \pause
+  \item Evaluate $\sum c_i x^i$ {\em \underline{in a field}}
+  \end{itemize}
 \end{frame}
 
 \begin{frame}
   \frametitle{Engineering HalftimeHash: tree hashing}
-  Fast almost-universal families like clhash, UMASH, and Poly1305 use Horner's method to compute hash of arbitrary length strings.
-  \pause
-
-  $ $\\
-  This, too, uses finite fields.
-\end{frame}
-
-\begin{frame}
-  \frametitle{Engineering HalftimeHash: tree hashing}
-  If $H$ is an almost-universal hash family from $V^2$ to $V$, then
+  If $H$ is an almost-universal hash family from $W^2$ to $W$, then
   $G_{s,t} \defeq H_t(H_s(a, b), H_s(c,d))$ is $2 \varepsilon$-almost universal
   \pause
   
   $ $\\
-  Iterate to get a family from  $V^{2^i}$ to $V$ that is $i \varepsilon$-almost universal
+  Iterate to get a family from  $W^{2^i}$ to $W$ that is $i \varepsilon$-almost universal
   % Notice: H(x) is used twice
   % If iterated, this construction tield s universe-collapsing almost-universal hash family
 \end{frame}
@@ -422,6 +399,91 @@ $ $ \\
   \end{center}
 \end{frame}
 
+\begin{frame}
+  \begin{center}
+    \href{https://github.com/jbapple/HalftimeHash}{github.com/jbapple/HalftimeHash}
+    $ $ \\
+    $ $ \\
+    \href{mailto:jbapple@apache.org}{\Large jbapple@apache.org}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{32}}$}}
+
+  If two input strings differ, their Hamming distance after encoding is at least $k+1$.
+  Let $x$ and $y$ be their encoded values.
+  \pause
+
+  $ $\\
+  We want to show that $\Pr_s\left[T(H_s(x)-H_s(y)) = \delta\right] \le (m \varepsilon)^{k+1}$
+  \pause
+
+  $ $\\
+  Let $U$ be a set of $k+1$ places where $x$ and $y$ differ.
+%  If The probability that $H_s(x) = H_s(y)$ is small: $\varepsilon^k$.
+%  Otherwise, there is at least one difference.
+  Let $R$ be the subset of $T$'s columns indexed by $U$
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine: linear map \textbf{ in $\mathbb{Z}_{2^{32}}$}}
+
+  The adjugate of $R$ has entries in $\mathbb{Z}$, and so can be interpreted over $\mathbb{Z}_{2^{32}}$.
+  \pause
+
+  $ $\\
+  $R$ is also non-singular in $\mathbb{Z}$, so $R^{-1}$ exists in $\mathbb{Q}$ and $R^{-1} = \adj(R) / \det(R)$.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine: linear map \textbf{in $\mathbb{Z}_{2^{32}}$}}
+
+  $ $\\
+  Let $\det(R) = o 2^{m'}$, where $o$ is odd. Note that $2^{m'} \le m$ and $o$ has an inverse in $\mathbb{Z}_{2^{32}}$.
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Encode-hash-combine: linear map \textbf{in $\mathbb{Z}_{2^{32}}$}}
+
+  After some arithmetic manipulation, can show that
+  \[
+  \begin{array}{l r c r c l}
+    \Pr_s[&R(H_s(x) - H_s(y)) & \equiv & \delta \bmod 2^{32}] & \le & \\
+    % adjugate sends equal to equal, but might also make non-equal, equal
+    \Pr_s[&2^{m'}(H_s(x) - H_s(y)) & \equiv & o^{-1} \delta \bmod 2^{32}] & = & \\
+    \Pr_s[&2^{m'}(H_s(x) - H_s(y)) & \equiv & 2^{m'} \delta' \bmod 2^{32}] & = & \\
+    % Another way to think og this next step: the high m' bits of \delta' can be anything
+    \Pr_s[&\bigvee_{0 \le c < 2^{m'}} H_s(x) - H_s(y) & = &  \delta'  + c 2^{32 -m'}] &  & \\
+    % union bound
+    & & &\le  (2^{m'} \varepsilon)^{k}
+  \end{array}
+  \]
+\end{frame}
+
+\begin{frame}
+  \begin{center}
+    \href{https://github.com/jbapple/HalftimeHash}{github.com/jbapple/HalftimeHash}
+    $ $ \\
+    $ $ \\
+    \href{mailto:jbapple@apache.org}{\Large jbapple@apache.org}
+  \end{center}
+\end{frame}
+
+
+
+
+%% \begin{frame}
+%%   \frametitle{Engineering HalftimeHash: tree hashing}
+%%   Fast almost-universal families like clhash, UMASH, and Poly1305 use Horner's method to compute hash of arbitrary length strings.
+%%   \pause
+
+%%   $ $\\
+%%   This, too, uses finite fields.
+%% \end{frame}
+
+
 %% \begin{frame}
 %%   \frametitle{Engineering HalftimeHash: tree hashing}
 %%   \begin{center}
@@ -432,7 +494,7 @@ $ $ \\
 
 
 
-%% \begin{frame}
+%% \begin{frame}n
 
 %%   \frametitle{Engineering HalftimeHash}
 %%   \pause
@@ -545,4 +607,4 @@ $ $ \\
 
 \end{document}
 
-%%  LocalWords:  HalftimeHash treaps EHC
+%%  LocalWords:  HalftimeHash treaps EHC UMASH clhash Merkle Horner's
