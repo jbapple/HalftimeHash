@@ -40,6 +40,7 @@ int main() {
 #include <arm_neon.h>
 #endif
 
+#include <algorithm> // for std::max
 #include <cassert>
 #include <climits>
 #include <cstdint>
@@ -639,6 +640,12 @@ struct EhcBadger {
     return sizeof(uint64_t) * words;
   }
 
+  // The minimum byte length necessary to get code coverage for the all parts of
+  // DfsTreeHash
+  static constexpr size_t GetCodeCoverageByteLength() {
+    return sizeof(Block) * dimension * in_width * fanout;
+  }
+
   struct BlockGreedy {
    private:
     const uint64_t* seeds;
@@ -992,6 +999,17 @@ inline constexpr size_t MaxEntropyBytesNeeded() {
   return sizeof(uint64_t) * (words + tab_words);
 }
 
+template <typename Wrapper, unsigned out_width>
+inline constexpr size_t GetCodeCoverageByteLength() {
+  return (3 == out_width)
+             ? EhcBadger<Wrapper, 7, 3, 9, out_width>::GetCodeCoverageByteLength()
+         : (2 == out_width)
+             ? EhcBadger<Wrapper, 6, 3, 7, out_width>::GetCodeCoverageByteLength()
+         : (4 == out_width)
+             ? EhcBadger<Wrapper, 7, 3, 10, out_width>::GetCodeCoverageByteLength()
+             : EhcBadger<Wrapper, 5, 3, 9, out_width>::GetCodeCoverageByteLength();
+}
+
 template <void (*Hasher)(const uint64_t* entropy, const char* char_input, size_t length,
                          uint64_t output[]),
           int width>
@@ -1123,6 +1141,17 @@ constexpr size_t kEntropyBytesNeeded =
     256 * 3 * sizeof(uint64_t) * sizeof(uint64_t) +
     advanced::GetEntropyBytesNeeded<
         advanced::RepeatWrapper<advanced::BlockWrapperScalar, 8>, 2>(~0ul);
+
+constexpr size_t kCodeCoverageByteLength = std::max(
+    advanced::GetCodeCoverageByteLength<
+        advanced::RepeatWrapper<advanced::BlockWrapperScalar, 8>, 2>(),
+    std::max(
+        advanced::GetCodeCoverageByteLength<
+            advanced::RepeatWrapper<advanced::BlockWrapperScalar, 8>, 3>(),
+        std::max(advanced::GetCodeCoverageByteLength<
+                     advanced::RepeatWrapper<advanced::BlockWrapperScalar, 8>, 4>(),
+                 advanced::GetCodeCoverageByteLength<
+                     advanced::RepeatWrapper<advanced::BlockWrapperScalar, 8>, 5>())));
 
 inline uint64_t HalftimeHashStyle512(
     const uint64_t entropy[kEntropyBytesNeeded / sizeof(uint64_t)], const char input[],
