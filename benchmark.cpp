@@ -77,12 +77,12 @@ inline Duration TimeMulti(unsigned count, U&&... args) {
        }
        auto after = Now();
        if (result <= (after - before) / i) {
-         // cerr << plateau << "\t" << i << "\t" << result.count() << "\t"
-         //      << ((after - before) / i).count() << "\t" << endl;
+         // cerr << plateau << "\t" << i << "\t" << result/*.count()*/ << "\t"
+         //      << ((after - before) / i)/*.count()*/ << "\t" << endl;
          ++plateau;
        } else {
-         // cerr << plateau << "\t" << i << "\t" << result.count() << "\t"
-         //      << ((after - before) / i).count() << "\t" << endl;
+         // cerr << plateau << "\t" << i << "\t" << result/*.count()*/ << "\t"
+         //      << ((after - before) / i)/*.count()*/ << "\t" << endl;
          result = (after - before) / i;
          i *= 2;
          plateau = 0;
@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
            << "Halftime" << (j * 8) << "v" << i;
     }
   }
-  cout << "\t clhash \t UMASH";
+  cout << "\t clhash \t UMASH \t UMASH128";
   cout << endl;
 
   uint64_t loop_count = 4;
@@ -209,21 +209,21 @@ int main(int argc, char** argv) {
 
       auto cl_time = TimeMulti<ClhashWrap>(reps, entropy, data.data(), i);
       // auto cl_time128 = TimeMulti<clhashWrap128>(reps, entropy, data.data(), i);
-       auto um_time = TimeMulti<umashWrap>(reps, entropy, data.data(), i);
-      // auto um_time128 = TimeMulti<umash128>(reps, entropy, data.data(), i);
+      auto um_time = TimeMulti<umashWrap>(reps, entropy, data.data(), i);
+      auto um_time128 = TimeMulti<umash128>(reps, entropy, data.data(), i);
 
       if (timings.find(i) == timings.end()) {
         timings[i] = {};
       }
       int k = 0;
       for (; k < 8; ++k) {
-        timings[i][k] = max(timings[i][k], 1.0 * i / hh_time[k]/*.count()*/);
+        timings[i][k] = max(timings[i][k], 1.0 * i / hh_time[k] /*.count()*/);
       }
 
       timings[i][k + 0] = max(timings[i][k + 0], 1.0 * i / cl_time/*.count()*/);
       // timings[i][k + 1] = max(timings[i][k + 1], 1.0 * i / cl_time128.count());
       timings[i][k + 1] = max(timings[i][k + 1], 1.0 * i / um_time/*.count()*/);
-      // timings[i][k + 3] = max(timings[i][k + 3], 1.0 * i / um_time128.count());
+      timings[i][k + 2] = max(timings[i][k + 2], 1.0 * i / um_time128/*.count()*/);
     }
   }
 
@@ -239,6 +239,7 @@ int main(int argc, char** argv) {
     }
     cout << "\t" << j.second[4];
     cout << "\t" << j.second[5];
+    cout << "\t" << j.second[6];
     cout << endl;
   }
 
