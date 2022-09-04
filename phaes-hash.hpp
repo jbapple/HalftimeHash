@@ -39,7 +39,8 @@ __m512i phaes_hash(const __m512i* input, size_t n, const __m512i phkey[31],
   __m512i accum1 = {};
   for (size_t i = 0; i < n; i += 32) {
     auto accum0 = input[i];
-    __m512i ctr = {(long)i};
+    __m512i ctr = {(long)i,     (long)i + 1, (long)i + 2, (long)i + 3,
+                   (long)i + 4, (long)i + 5, (long)i + 6, (long)i + 7};
     _mm512_aesenc_epi128(ctr, aeskey[0]);
 #pragma GCC unroll 32
     for (int j = 1; j < 32; ++j) {
