@@ -16,6 +16,7 @@
 
 #include "StronglyUniversalStringHashing/include/clhash.h"
 #include "halftime-hash.hpp"
+#include "phaes-hash.hpp"
 #include "umash/umash.h"
 
 using namespace std;
@@ -122,6 +123,14 @@ inline uint64_t ClhashWrap(const uint64_t entropy[], const char input[],
   return CLHASHbyte(entropy, input, char_length);
 }
 
+inline uint64_t PhaesWrap(const uint64_t entropy[], const char input[],
+                           uint64_t char_length) {
+  auto result = phaes_hash(reinterpret_cast<const __m512i *>(input), char_length,
+                           reinterpret_cast<const __m512i *>(entropy),
+                           reinterpret_cast<const __m512i *>(entropy));
+  return result[0] ^ result[1] ^ result[2] ^ result[3] ^ result[4] ^ result[5] ^ result[6] ^ result[7];
+}
+
 uint64_t clhashWrap128(const uint64_t *rs, const char *stringword, const size_t length) {
   auto x = CLHASHbyte(rs, reinterpret_cast<const char *>(stringword), length);
   x ^= CLHASHbyte(rs +8, reinterpret_cast<const char *>(stringword), length);
@@ -142,7 +151,7 @@ int main(int argc, char** argv) {
   auto max_length = (argc > 2) ? To<uint64_t>(argv[2]) : 4000;
   auto percent_increment = (argc > 3) ? To<double>(argv[3]) : 2;
   max_length = max(max_length, min_length);
-  uint64_t entropy[32000 / sizeof(uint64_t)] = {};
+  alignas(64) uint64_t entropy[32000 / sizeof(uint64_t)] = {};
 
   umash_params* umash_seeds = reinterpret_cast<umash_params*>(entropy);
   while (true) {
@@ -153,7 +162,8 @@ int main(int argc, char** argv) {
     if (umash_params_prepare(umash_seeds)) break;
   }
 
-  vector<char> data(max_length, 0);
+  
+  auto data = reinterpret_cast<const char *>(aligned_alloc(64, max_length));
 
   cout << "0 \t best_hh";
   for (int i : {4, 3}) {
@@ -162,7 +172,7 @@ int main(int argc, char** argv) {
            << "Halftime" << (j * 8) << "v" << i;
     }
   }
-  cout << "\t clhash \t UMASH \t UMASH128";
+  cout << "\t clhash \t UMASH \t UMASH128 \t phaes";
   cout << endl;
 
   uint64_t loop_count = 4;
@@ -175,42 +185,43 @@ int main(int argc, char** argv) {
       reps = max(reps, 8.0);
       reps = min(1000.0 * 1000, reps);
       Duration hh_time[8] = {
-          // TimeMulti<clhashWrap128>(reps, entropy, data.data(), i),
-          // TimeMulti<umash128>(reps, entropy, data.data(), i)
-          TimeMulti<WrapHash<V4<2>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V4<3>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V4<4>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V4<5>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V3<2>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V3<3>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V3<4>>>(reps, entropy, data.data(), i),
-          TimeMulti<WrapHash<V3<5>>>(reps, entropy, data.data(), i),
+          // TimeMulti<clhashWrap128>(reps, entropy, data, i),
+          // TimeMulti<umash128>(reps, entropy, data, i)
+          TimeMulti<WrapHash<V4<2>>>(reps, entropy, data, i),
+          TimeMulti<WrapHash<V4<3>>>(reps, entropy, data, i),
+          TimeMulti<WrapHash<V4<4>>>(reps, entropy, data, i),
+          TimeMulti<WrapHash<V4<5>>>(reps, entropy, data, i),
+          TimeMulti<WrapHash<V3<2>>>(reps, entropy, data, i),
+          TimeMulti<WrapHash<V3<3>>>(reps, entropy, data, i),
+          TimeMulti<WrapHash<V3<4>>>(reps, entropy, data, i),
+          TimeMulti<WrapHash<V3<5>>>(reps, entropy, data, i),
 
           // TimeMulti<WrapHash< Hash<RepeatWrapper<BlockWrapper512, 2>, 6, 2,
           // encoded_dimension,
           //     out_width>(entropy, char_input, length, output);V4<5>>>(reps, entropy,
-          //     data.data(), i),
+          //     data, i),
 
-          // TimeMulti<WrapHash<V3<2>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<V3<3>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<V3<4>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<V3<5>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V3<2>>>(reps, entropy, data, i),
+          // TimeMulti<WrapHash<V3<3>>>(reps, entropy, data, i),
+          // TimeMulti<WrapHash<V3<4>>>(reps, entropy, data, i),
+          // TimeMulti<WrapHash<V3<5>>>(reps, entropy, data, i),
 
-          // TimeMulti<WrapHash<V2<2>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<V2<3>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<V2<4>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<V2<5>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V2<2>>>(reps, entropy, data, i),
+          // TimeMulti<WrapHash<V2<3>>>(reps, entropy, data, i),
+          // TimeMulti<WrapHash<V2<4>>>(reps, entropy, data, i),
+          // TimeMulti<WrapHash<V2<5>>>(reps, entropy, data, i),
 
-          // TimeMulti<WrapHash<V1<2>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<V1<3>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<V1<4>>>(reps, entropy, data.data(), i),
-          // TimeMulti<WrapHash<V1<5>>>(reps, entropy, data.data(), i),
+          // TimeMulti<WrapHash<V1<2>>>(reps, entropy, data, i),
+          // TimeMulti<WrapHash<V1<3>>>(reps, entropy, data, i),
+          // TimeMulti<WrapHash<V1<4>>>(reps, entropy, data, i),
+          // TimeMulti<WrapHash<V1<5>>>(reps, entropy, data, i),
       };
 
-      auto cl_time = TimeMulti<ClhashWrap>(reps, entropy, data.data(), i);
-      // auto cl_time128 = TimeMulti<clhashWrap128>(reps, entropy, data.data(), i);
-      auto um_time = TimeMulti<umashWrap>(reps, entropy, data.data(), i);
-      auto um_time128 = TimeMulti<umash128>(reps, entropy, data.data(), i);
+      auto cl_time = TimeMulti<ClhashWrap>(reps, entropy, data, i);
+      // auto cl_time128 = TimeMulti<clhashWrap128>(reps, entropy, data, i);
+      auto um_time = TimeMulti<umashWrap>(reps, entropy, data, i);
+      auto um_time128 = TimeMulti<umash128>(reps, entropy, data, i);
+      auto phaes_time = TimeMulti<PhaesWrap>(reps, entropy, data, i);
 
       if (timings.find(i) == timings.end()) {
         timings[i] = {};
@@ -224,6 +235,7 @@ int main(int argc, char** argv) {
       // timings[i][k + 1] = max(timings[i][k + 1], 1.0 * i / cl_time128.count());
       timings[i][k + 1] = max(timings[i][k + 1], 1.0 * i / um_time/*.count()*/);
       timings[i][k + 2] = max(timings[i][k + 2], 1.0 * i / um_time128/*.count()*/);
+      timings[i][k + 3] = max(timings[i][k + 3], 1.0 * i / phaes_time/*.count()*/);
     }
   }
 
@@ -240,6 +252,7 @@ int main(int argc, char** argv) {
     cout << "\t" << j.second[4];
     cout << "\t" << j.second[5];
     cout << "\t" << j.second[6];
+    cout << "\t" << j.second[7];
     cout << endl;
   }
 

@@ -8,13 +8,13 @@ all: Diagram2.eps random-combiners.exe speed-v-epsilon.eps benchmark.exe \
 	speed-v-epsilon-amd.pdf line-cl-hh24.pdf amd-cl-hh24.pdf easychair.zip \
 	tree.eps tree-1.eps tree-2.eps tree-3.eps check-consistency.exe
 
-RELEASE_FLAGS = -ggdb3 -O3 -march=native -Wall -Wextra -Wstrict-aliasing \
+RELEASE_FLAGS = -ggdb3 -O3 -march=icelake-server -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -DNDEBUG \
 	-Wno-comment -Wno-ignored-attributes -Wno-constant-conversion \
 	-Wno-unused-lambda-capture
 	# -fsanitize=memory -fsanitize-blacklist=deny-list.txt #-stdlib=libc++
 
-DEBUG_FLAGS = -ggdb3 -O0 -march=native -Wall -Wextra -Wstrict-aliasing \
+DEBUG_FLAGS = -ggdb3 -O0 -march=icelake-server -Wall -Wextra -Wstrict-aliasing \
 	-funroll-loops -fno-strict-aliasing -Wno-strict-overflow -UNDEBUG \
 	-Wno-comment -Wno-ignored-attributes -Wno-constant-conversion \
 	-Wno-unused-lambda-capture

@@ -40,7 +40,7 @@ int main() {
 #include <arm_neon.h>
 #endif
 
-#include <algorithm> // for std::max
+#include <algorithm>  // for std::max
 #include <cassert>
 #include <climits>
 #include <cstdint>
