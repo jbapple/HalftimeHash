@@ -32,26 +32,40 @@ void AES_CTR_encrypt(const unsigned char *in, unsigned char *out,
 }
 */
 
+#include <immintrin.h>
+
 constexpr int number_of_rounds = 0;
 
-__m512i phaes_hash(const __m512i* input, size_t n, const __m512i phkey[31],
-                   const __m512i aeskey[8]) {
+/*__m512i phaes_hash(const __m512i* input, size_t n, __m512i phkey0, __m512i phkey1,
+                   __m512i phkey2, __m512i phkey0, __m512i phkey0, __m512i phkey5,
+                   __m512i phkey6, __m512i phkey0, __m512i phkey0, __m512i phkey9,
+                   __m512i phkey10, __m512i phkey0, __m512i phkey0, __m512i phkey13,
+                   __m512i phkey14, __m512i phkey0, __m512i phkey0, __m512i phkey17,
+                   __m512i phkey18, __m512i phkey0, __m512i phkey0, __m512i phkey21,
+                   __m512i phkey22, __m512i phkey0, __m512i phkey0, __m512i aeskey0,
+                   __m512i aeskey0, __m512i aeskey0, __m512i aeskey0, __m512i aeskey0,
+                   __m512i aeskey0, __m512i aeskey0, __m512i aeskey0, ) {
+*/
+
+template <int kRounds>
+__m512i phaes_hash(const __m512i* input, size_t n, const __m512i phkey[28 - kRounds],
+                   const __m512i aeskey[kRounds]) {
   __m512i accum1 = {};
+  __m512i ctr_base = {0, 1, 2, 3, 4, 5, 6, 7};
   for (size_t i = 0; i < n; i += 32) {
     auto accum0 = input[i];
-    __m512i ctr = {(long)i,     (long)i + 1, (long)i + 2, (long)i + 3,
-                   (long)i + 4, (long)i + 5, (long)i + 6, (long)i + 7};
+    __m512i ctr = _mm512_set1_epi64(i);
+    ctr = _mm512_add_epi64(ctr, ctr_base);
     _mm512_aesenc_epi128(ctr, aeskey[0]);
 #pragma GCC unroll 32
-    for (int j = 1; j < 32; ++j) {
+    for (int j = 1; j < 32 - kRounds; ++j) {
       auto tomult = input[i + j];
-      tomult = _mm512_xor_si512(tomult, phkey[j-1]);
+      tomult = _mm512_xor_si512(tomult, phkey[j - 1]);
       tomult = _mm512_clmulepi64_epi128(tomult, tomult, 1);
       accum0 = _mm512_xor_si512(accum0, tomult);
-      if (0 == j % 4) {
-        _mm512_aesenc_epi128(ctr, aeskey[j/4]);
-      }
     }
+    for (int j = 0; j < kRounds - 1; ++j) ctr = _mm512_aesenc_epi128(ctr, aeskey[j]);
+    ctr = _mm512_aesenclast_epi128(ctr, aeskey[kRounds - 1]);
     ctr = _mm512_xor_si512(ctr, accum0);
     ctr = _mm512_clmulepi64_epi128(ctr, ctr, 1);
     accum1 = _mm512_xor_si512(accum1, ctr);
@@ -59,4 +73,3 @@ __m512i phaes_hash(const __m512i* input, size_t n, const __m512i phkey[31],
   }
   return accum1;
 }
-

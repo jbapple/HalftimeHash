@@ -125,9 +125,9 @@ inline uint64_t ClhashWrap(const uint64_t entropy[], const char input[],
 
 inline uint64_t PhaesWrap(const uint64_t entropy[], const char input[],
                            uint64_t char_length) {
-  auto result = phaes_hash(reinterpret_cast<const __m512i *>(input), char_length / 64,
-                           reinterpret_cast<const __m512i *>(entropy),
-                           reinterpret_cast<const __m512i *>(entropy));
+  auto result = phaes_hash<10>(reinterpret_cast<const __m512i *>(input), char_length / 64,
+                               reinterpret_cast<const __m512i *>(entropy),
+                               reinterpret_cast<const __m512i *>(entropy));
   return result[0] ^ result[1] ^ result[2] ^ result[3] ^ result[4] ^ result[5] ^ result[6] ^ result[7];
 }
 
