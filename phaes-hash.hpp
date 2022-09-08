@@ -47,18 +47,20 @@ constexpr int number_of_rounds = 0;
                    __m512i aeskey0, __m512i aeskey0, __m512i aeskey0, ) {
 */
 
-template <int kRounds>
-__m512i phaes_hash(const __m512i* input, size_t n, const __m512i phkey[28 - kRounds],
+
+
+template <int kRounds, int kHi = 28>
+__m512i phaes_hash(const __m512i* input, size_t n, const __m512i phkey[kHi - kRounds],
                    const __m512i aeskey[kRounds]) {
   __m512i accum1 = {};
   __m512i ctr_base = {0, 1, 2, 3, 4, 5, 6, 7};
-  for (size_t i = 0; i < n; i += 32) {
+  for (size_t i = 0; i < n; i += kHi - kRounds) {
     auto accum0 = input[i];
     __m512i ctr = _mm512_set1_epi64(i);
     ctr = _mm512_add_epi64(ctr, ctr_base);
     _mm512_aesenc_epi128(ctr, aeskey[0]);
 #pragma GCC unroll 32
-    for (int j = 1; j < 32 - kRounds; ++j) {
+    for (int j = 1; j < kHi - kRounds; ++j) {
       auto tomult = input[i + j];
       tomult = _mm512_xor_si512(tomult, phkey[j - 1]);
       tomult = _mm512_clmulepi64_epi128(tomult, tomult, 1);
@@ -70,6 +72,41 @@ __m512i phaes_hash(const __m512i* input, size_t n, const __m512i phkey[28 - kRou
     ctr = _mm512_clmulepi64_epi128(ctr, ctr, 1);
     accum1 = _mm512_xor_si512(accum1, ctr);
     accum1 = _mm512_xor_si512(accum1, accum0);
+  }
+  return accum1;
+}
+
+
+#include <immintrin.h>
+
+constexpr int kRounds = 10;
+constexpr int hi = 23;
+
+__m256i phaes_hash_256(const __m256i* input, size_t n, const __m256i phkey[hi - kRounds],
+                       const __m128i aeskey[kRounds]) {
+  __m256i accum1 = {};
+  __m256i ctr_base = {0, 1, 2, 3};
+  for (size_t i = 0; i < n; i += hi - kRounds) {
+    auto accum0 = input[i];
+    __m256i ctr = _mm256_set1_epi64x(i);
+    ctr = _mm256_add_epi64(ctr, ctr_base);
+    _mm256_aesenc_epi128(ctr, _mm256_set_m128i(aeskey[0], aeskey[0]));
+#pragma GCC unroll 32
+    for (int j = 1; j < hi - kRounds; ++j) {
+      auto tomult = input[i + j];
+      tomult = _mm256_xor_si256(tomult, phkey[j - 1]);
+      tomult = _mm256_clmulepi64_epi128(tomult, tomult, 1);
+      accum0 = _mm256_xor_si256(accum0, tomult);
+    }
+    for (int j = 0; j < kRounds - 1; ++j) {
+      ctr = _mm256_aesenc_epi128(ctr, _mm256_set_m128i(aeskey[j], aeskey[j]));
+    }
+    ctr = _mm256_aesenclast_epi128(
+        ctr, _mm256_set_m128i(aeskey[kRounds - 1], aeskey[kRounds - 1]));
+    ctr = _mm256_xor_si256(ctr, accum0);
+    ctr = _mm256_clmulepi64_epi128(ctr, ctr, 1);
+    accum1 = _mm256_xor_si256(accum1, ctr);
+    accum1 = _mm256_xor_si256(accum1, accum0);
   }
   return accum1;
 }
