@@ -110,3 +110,24 @@ __m256i phaes_hash_256(const __m256i* input, size_t n, const __m256i phkey[hi - 
   }
   return accum1;
 }
+
+
+template <int hi = 16>
+__m512i ph_single(const __m512i* input, size_t n, const __m512i phkey) {
+  __m512i accum[hi] = {};
+  for (size_t i = 0; i < n; i += hi) {
+    __m512i tomult[hi];
+ #pragma GCC unroll 32
+   for (int j = 0; j < hi; ++j) {
+      tomult[j] = input[i + j];
+      tomult[j] = _mm512_xor_si512(tomult[j], phkey);
+      tomult[j] = _mm512_clmulepi64_epi128(tomult[j], tomult[j], 1);
+      accum[j] = _mm512_xor_si512(accum[j], tomult[j]);
+    }
+  }
+  auto result = accum[0];
+  for (int i = 1 ; i < hi; ++i) {
+      result ^= accum[i];
+  }
+  return result;
+}
