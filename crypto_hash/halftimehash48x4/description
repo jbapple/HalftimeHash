@@ -1,0 +1,4 @@
+HalftimeHash is a keyed almost-universal hash function (like Poly1305,
+albeit with a very different design). See "HalftimeHash: Modern
+Hashing without 64-bit Multipliers or Finite Fields" on arXiv or WADS
+2021, or included as a PDF in this directory.
