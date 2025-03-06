@@ -95,7 +95,7 @@ struct BlockWrapper128 {
   static u128 LoadOne(uint64_t entropy) { return vdupq_n_u64(entropy); }
 };
 
-#elif __SSE2__
+#elif defined(__SSE2__)
 
 using u128 = __m128i;
 
@@ -127,7 +127,7 @@ struct BlockWrapper128 {
 
 #endif  // ARM NEON and SSE2
 
-#if __AVX2__
+#if defined(__AVX2__)
 
 using u256 = __m256i;
 
@@ -171,7 +171,7 @@ struct BlockWrapper256 {
 
 #endif  // AVX2
 
-#if __AVX512F__
+#if defined(__AVX512F__)
 
 using u512 = __m512i;
 
@@ -223,13 +223,13 @@ struct BestSimd {};
     using SimdDispatch = WRAPPER;                 \
   };
 
-#if __AVX512F__
+#if defined(__AVX512F__)
 #  define HALFTIME_IMPL_STR "avx512f"
 #  define HALFTIME_IMPL_WIDEST_SIMD_LOG_BLOCK_WIDTH 4
-#elif __AVX2__
+#elif defined(__AVX2__)
 #  define HALFTIME_IMPL_STR "avx2"
 #  define HALFTIME_IMPL_WIDEST_SIMD_LOG_BLOCK_WIDTH 3
-#elif __SSE2__
+#elif defined(__SSE2__)
 #  define HALFTIME_IMPL_STR "sse2"
 #  define HALFTIME_IMPL_WIDEST_SIMD_LOG_BLOCK_WIDTH 2
 #elif defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(_M_ARM64)
@@ -240,25 +240,25 @@ struct BestSimd {};
 #  define HALFTIME_IMPL_WIDEST_SIMD_LOG_BLOCK_WIDTH 1
 #endif
 
-#if __AVX512F__
+#if defined(__AVX512F__)
 BEST_SPECIALIZE(4, BlockWrapper512);
-#elif __AVX2__
+#elif defined(__AVX2__)
 BEST_SPECIALIZE(4, BlockWrapper256);
-#elif __SSE2__ || defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(_M_ARM64)
+#elif defined(__SSE2__) || defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(_M_ARM64)
 BEST_SPECIALIZE(4, BlockWrapper128);
 #else
 BEST_SPECIALIZE(4, BlockWrapperScalar);
 #endif
 
-#if __AVX2__
+#if defined(__AVX2__)
 BEST_SPECIALIZE(3, BlockWrapper256);
-#elif __SSE2__ || defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(_M_ARM64)
+#elif defined(__SSE2__ || defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(_M_ARM64)
 BEST_SPECIALIZE(3, BlockWrapper128);
 #else
 BEST_SPECIALIZE(3, BlockWrapperScalar);
 #endif
 
-#if __SSE2__ || defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(_M_ARM64)
+#if defined(__SSE2__) || defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(_M_ARM64)
 BEST_SPECIALIZE(2, BlockWrapper128);
 #else
 BEST_SPECIALIZE(2, BlockWrapperScalar);
