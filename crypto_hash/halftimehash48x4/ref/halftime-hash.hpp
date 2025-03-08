@@ -271,7 +271,10 @@ constexpr int MessageLength(int hh_output_length) {
              ? 12
              : ((hh_output_length == 2)
                     ? 6
-                    : ((hh_output_length == 3) ? 7 : ((hh_output_length == 4) ? 7 : 5)));
+                    : ((hh_output_length == 3) ? 7
+                                               : ((hh_output_length == 4)   ? 7
+                                                  : (hh_output_length == 5) ? 5
+                                                                            : 4)));
 }
 
 constexpr int BlockLength(int hh_output_length) {
@@ -492,6 +495,87 @@ inline void Encode5(Block raw_io[BlockLength(5) * 3]) {
   Distribute3(8, {x, z}, {x, y, z}, {y, z});  // 244
 }
 
+/*
+Dual code:
+
+xyz 0 0 0 0 xyz xyz       z,xz,yz  zyx
+0 xyz 0 0 0 xyz xy,yz,xyz x,yz,z   yz,xy,z
+0 0 xyz 0 0 xyz xz,x,y    yz,y,xz  xy,z,y
+0 0 0 xyz 0 xyz y,z,xy    y,xyz,xy y,x,xz
+0 0 0 0 xyz xyz z,xy,yz   xyz,z,x  xz,xyz,yz
+
+turns into
+
+xyz     xyz       xyz     xyz      xyz       xyz 0 0 0
+xyz     xy,yz,xyz xz,x,y  y,z,xy   z,xy,yz   0 xyz 0 0
+z,xz,yz x,yz,z    yz,y,xz y,xyz,xy xyz,z,x   0 0 xyz 0
+zyx     yz,xy,z   xy,z,y  y,x,xz   xz,xyz,yz 0 0 0 xyz
+
+But rearranging columns is fine:
+
+xyz 0 0 0 xyz     xyz       xyz     xyz      xyz
+0 xyz 0 0 xyz     xy,yz,xyz xz,x,y  y,z,xy   z,xy,yz
+0 0 xyz 0 z,xz,yz x,yz,z    yz,y,xz y,xyz,xy xyz,z,x
+0 0 0 xyz zyx     yz,xy,z   xy,z,y  y,x,xz   xz,xyz,yz
+
+ */
+template <typename Block>
+inline void Encode6(Block raw_io[BlockLength(6) * 3]) {
+  static constexpr int hh_output_length = 6;
+  static constexpr int log2_alphabet = 3;
+  static_assert(log2_alphabet == Log2Alphabet(hh_output_length),
+                "Alphabet not expected size");
+
+  auto io = reinterpret_cast<Block(*)[log2_alphabet]>(raw_io);
+
+  constexpr unsigned x = 0, y = 1, z = 2;
+
+  const Block *iter = io[0];
+
+  for (auto j : {x, y, z}) io[4][j] = io[5][j] = io[6][j] = io[7][j] = io[8][j] = iter[j];
+
+  auto DistributeRaw = [io, &iter](unsigned slot, unsigned label,
+                                   std::initializer_list<unsigned> rest) {
+    for (unsigned i : rest) {
+      io[slot][i] = Xor(io[slot][i], iter[label]);
+    }
+  };
+
+  auto Distribute3 = [DistributeRaw, x, y, z](unsigned idx,
+                                              std::initializer_list<unsigned> a,
+                                              std::initializer_list<unsigned> b,
+                                              std::initializer_list<unsigned> c) {
+    // Need capture for MSVC; need cast for Clang
+    static_cast<void>(x);
+    static_cast<void>(y);
+    static_cast<void>(z);
+    DistributeRaw(idx, x, a);
+    DistributeRaw(idx, y, b);
+    DistributeRaw(idx, z, c);
+  };
+
+  iter = io[1];
+  Distribute3(4, {x}, {y}, {z});
+  Distribute3(5, {x, y}, {y, z}, {x, y, z});
+  Distribute3(6, {x, z}, {x}, {y});
+  Distribute3(7, {y}, {z}, {x, y});
+  Distribute3(8, {z}, {x, y}, {y, z});
+  ++iter;
+
+  Distribute3(4, {z}, {x, z}, {y, z});
+  Distribute3(5, {x}, {y, z}, {z});
+  Distribute3(6, {x, y}, {y}, {x, z});
+  Distribute3(7, {x}, {x, y, z}, {x, y});
+  Distribute3(8, {x, y, z}, {z}, {x});
+  ++iter;
+
+  Distribute3(4, {z}, {y}, {x});
+  Distribute3(5, {y, z}, {x, y}, {z});
+  Distribute3(6, {x, y}, {z}, {y});
+  Distribute3(7, {y}, {x}, {x, z});
+  Distribute3(8, {x, z}, {x, y, z}, {y, z});
+}
+
 template <typename Badger, typename Block>
 inline void Combine1(const Block input[BlockLength(1)], Block output[1]);
 
@@ -506,6 +590,9 @@ inline void Combine4(const Block input[BlockLength(4)], Block output[4]);
 
 template <typename Badger, typename Block>
 inline void Combine5(const Block input[BlockLength(5)], Block output[5]);
+
+template <typename Badger, typename Block>
+inline void Combine6(const Block input[BlockLength(6)], Block output[6]);
 
 constexpr inline uint32_t FloorLog(uint64_t a, uint64_t b) {
   return (0 == a) ? 0 : ((b < a) ? 0 : (1 + (FloorLog(a, b / a))));
@@ -551,7 +638,7 @@ struct EhcBadger {
   }
 
   static void Encode(Block (&io)[block_length][log2_alphabet]) {
-    static_assert(1 <= hh_output_length && hh_output_length <= 5, "unknown width");
+    static_assert(1 <= hh_output_length && hh_output_length <= 6, "unknown width");
     // Can pass IO as a reference (rather than taking the address of the
     // 0th element) with constexpr if or static dispatch. Right now the
     // compiler MAKES this into static dispatch at codegen/optimization
@@ -560,6 +647,7 @@ struct EhcBadger {
     CONSTEXPR_IF(hh_output_length == 3) { return Encode3<Block>(&io[0][0]); }
     CONSTEXPR_IF(hh_output_length == 4) { return Encode4<Block>(&io[0][0]); }
     CONSTEXPR_IF(hh_output_length == 5) { return Encode5<Block>(&io[0][0]); }
+    CONSTEXPR_IF(hh_output_length == 6) { return Encode6<Block>(&io[0][0]); }
   }
 
   static Block SimpleTimes(std::integral_constant<int, 1>, const Block &x) { return x; }
@@ -578,6 +666,10 @@ struct EhcBadger {
 
   static Block SimpleTimes(std::integral_constant<int, 5>, const Block &x) {
     return Plus(x, LeftShift(x, 2));
+  }
+
+  static Block SimpleTimes(std::integral_constant<int, 6>, const Block &x) {
+    return Plus(LeftShift(x, 1), LeftShift(x, 2));
   }
 
   static Block SimpleTimes(std::integral_constant<int, 7>, const Block &x) {
@@ -621,6 +713,12 @@ struct EhcBadger {
     sinks[4] = Plus(sinks[4], SimplerTimes<e>(x));
   }
 
+  template <int a, int b, int c, int d, int e, int f>
+  static void Dot6(Block sinks[6], const Block &x) {
+    Dot5<a, b, c, d, e>(sinks, x);
+    sinks[5] = Plus(sinks[5], SimplerTimes<e>(x));
+  }
+
   static void Combine(const Block (&input)[block_length],
                       Block (&output)[hh_output_length]) {
     // Can pass input and output as references with constexpr if or static
@@ -631,6 +729,7 @@ struct EhcBadger {
     CONSTEXPR_IF(hh_output_length == 3) { return Combine3<EhcBadger>(input, output); }
     CONSTEXPR_IF(hh_output_length == 4) { return Combine4<EhcBadger>(input, output); }
     CONSTEXPR_IF(hh_output_length == 5) { return Combine5<EhcBadger>(input, output); }
+    CONSTEXPR_IF(hh_output_length == 6) { return Combine6<EhcBadger>(input, output); }
   }
 
   static void Load(
@@ -888,6 +987,20 @@ inline void Combine5(const Block input[BlockLength(5)], Block output[5]) {
   Badger::template Dot5<4, 7, 5, 8, 9>(output, input[8]);
 }
 
+// evenness: 2 weight: 13
+// 1   0   0   0   0   0   1   1   4 
+// 0   1   0   0   0   0   1   2   3 
+// 0   0   1   0   0   0   1   3   6 
+// 0   0   0   1   0   0   1   4   5 
+// 0   0   0   0   1   0   1   5   1 
+// 0   0   0   0   0   1   1   6   2 
+template <typename Badger, typename Block>
+inline void Combine6(const Block input[BlockLength(6)], Block output[6]) {
+  for (int i = 0; i < 6; ++i) output[i] = Plus(input[i], input[6]);
+  Badger::template Dot6<1, 2, 3, 4, 5, 6>(output, input[7]);
+  Badger::template Dot6<4, 3, 6, 5, 1, 2>(output, input[8]);
+}
+
 template <typename BlockWrapper, int hh_output_length>
 static void Hash(const uint64_t *entropy, const unsigned char *char_input, size_t length,
                  uint64_t output[hh_output_length]) {
@@ -1043,7 +1156,7 @@ inline constexpr size_t GetEntropyBytesNeeded(size_t n) {
 
 }  // namespace advanced
 
-static constexpr int kMaxHhOutputLength = 5;
+static constexpr int kMaxHhOutputLength = 6;
 static constexpr int kMaxLogBlockWidth = 4;
 
 template <int log_block_width>
